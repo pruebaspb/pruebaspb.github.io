@@ -124,21 +124,22 @@
     </div>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-// --- CONFIGURACIÓN DE FIREBASE ---
         const firebaseConfig = {
-    apiKey: "AIzaSyCS-MiXwA9JcuoXdw2vhYWr-UWwyubFlbI",
-    authDomain: "estado-de-pruebas001.firebaseapp.com",
-    projectId: "estado-de-pruebas001",
-    storageBucket: "estado-de-pruebas001.appspot.com", // <-- Corregí esto también, usualmente termina en .appspot.com
-    messagingSenderId: "17757056222",
-    appId: "1:17757056222:web:a73b7b7832746a8291e64f",
-    measurementId: "G-PGJVXH1BNM"
-};
+            apiKey: "AIzaSyCS-MiXwA9JcuoXdw2vhYWr-UWwyubFlbI",
+            authDomain: "estado-de-pruebas001.firebaseapp.com",
+            projectId: "estado-de-pruebas001",
+            storageBucket: "estado-de-pruebas001.appspot.com", // <-- Corregí esto también, usualmente termina en .appspot.com
+            messagingSenderId: "17757056222",
+            appId: "1:17757056222:web:a73b7b7832746a8291e64f",
+            measurementId: "G-PGJVXH1BNM"
+        };
+        // Inicializamos Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         const transfersCollection = db.collection("transferencias");
         const productsCollection = db.collection("products");
+        
 
         // --- ROLES DE USUARIO ---
         const USER_ROLES = {
