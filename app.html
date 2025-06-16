@@ -130,7 +130,7 @@
             </div>
         </div>
     </div>
-    <script>
+   <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- CONFIGURACIÓN DE FIREBASE ---
         const firebaseConfig = {
@@ -158,56 +158,38 @@
         let allProducts = [], currentTransferItems = [], allTransferRequests = [], currentUserData = null;
         const expandedRequestsState = new Set();
         const sectionDisplayCounts = {};
-        const INITIAL_DISPLAY_COUNT = 5;
+        const INITIAL_DISPLAY_COUNT = 2; // Restaurado a 2
         const LOAD_MORE_COUNT = 10;
         currentTransferItems = JSON.parse(localStorage.getItem('currentTransferDraft')) || [];
 
         // --- REFERENCIAS AL DOM ---
         const dom = {
-            productList: document.getElementById('productList'),
-            currentTransferRequest: document.getElementById('currentTransferRequest'),
-            transferForm: document.getElementById('transferForm'),
-            toWarehouse: document.getElementById('toWarehouse'),
-            requesterName: document.getElementById('requesterName'),
-            searchInput: document.getElementById('searchInput'),
-            requesterView: document.getElementById('requesterView'),
-            adminView: document.getElementById('adminView'),
-            myShippedRequests: document.getElementById('myShippedRequests'),
-            myPendingRequests: document.getElementById('myPendingRequests'),
-            myHistoryRequests: document.getElementById('myHistoryRequests'),
-            myNoveltyRequests: document.getElementById('myNoveltyRequests'),
-            adminPendingRequests: document.getElementById('adminPendingRequests'),
-            adminPendingNtRequests: document.getElementById('adminPendingNtRequests'),
-            adminReadyToShipRequests: document.getElementById('adminReadyToShipRequests'),
-            adminShippingDetailsRequests: document.getElementById('adminShippingDetailsRequests'),
-            adminShippedRequests: document.getElementById('adminShippedRequests'),
-            adminCompletedRequests: document.getElementById('adminCompletedRequests'),
-            adminNoveltyRequests: document.getElementById('adminNoveltyRequests'),
-            adminCancelledRequests: document.getElementById('adminCancelledRequests'),
-            requesterSearchId: document.getElementById('requesterSearchId'),
-            requesterDateFrom: document.getElementById('requesterDateFrom'),
-            requesterDateTo: document.getElementById('requesterDateTo'),
-            adminActiveSearchId: document.getElementById('adminActiveSearchId'),
-            adminActiveDateFrom: document.getElementById('adminActiveDateFrom'),
-            adminActiveDateTo: document.getElementById('adminActiveDateTo'),
-            adminHistorySearchId: document.getElementById('adminHistorySearchId'),
-            adminHistoryDateFrom: document.getElementById('adminHistoryDateFrom'),
-            adminHistoryDateTo: document.getElementById('adminHistoryDateTo'),
-            exportExcelBtn: document.getElementById('exportExcelBtn'),
-            productManagementCard: document.getElementById('productManagementCard'),
-            productFile: document.getElementById('productFile'),
-            uploadProductsBtn: document.getElementById('uploadProductsBtn'),
-            uploadStatus: document.getElementById('uploadStatus'),
-            fileNameDisplay: document.getElementById('fileNameDisplay'),
-            userEmailDisplay: document.getElementById('userEmailDisplay'),
-            logoutBtn: document.getElementById('logoutBtn')
+            productList: document.getElementById('productList'), currentTransferRequest: document.getElementById('currentTransferRequest'),
+            transferForm: document.getElementById('transferForm'), toWarehouse: document.getElementById('toWarehouse'),
+            requesterName: document.getElementById('requesterName'), searchInput: document.getElementById('searchInput'),
+            requesterView: document.getElementById('requesterView'), adminView: document.getElementById('adminView'),
+            myShippedRequests: document.getElementById('myShippedRequests'), myPendingRequests: document.getElementById('myPendingRequests'), 
+            myHistoryRequests: document.getElementById('myHistoryRequests'), myNoveltyRequests: document.getElementById('myNoveltyRequests'), myCompletedRequests: document.getElementById('myCompletedRequests'), myCancelledRequests: document.getElementById('myCancelledRequests'),
+            adminPendingRequests: document.getElementById('adminPendingRequests'), adminPendingNtRequests: document.getElementById('adminPendingNtRequests'),
+            adminReadyToShipRequests: document.getElementById('adminReadyToShipRequests'), adminShippingDetailsRequests: document.getElementById('adminShippingDetailsRequests'),
+            adminShippedRequests: document.getElementById('adminShippedRequests'), adminCompletedRequests: document.getElementById('adminCompletedRequests'),
+            adminNoveltyRequests: document.getElementById('adminNoveltyRequests'), adminCancelledRequests: document.getElementById('adminCancelledRequests'),
+            requesterSearchId: document.getElementById('requesterSearchId'), requesterDateFrom: document.getElementById('requesterDateFrom'), requesterDateTo: document.getElementById('requesterDateTo'),
+            adminActiveSearchId: document.getElementById('adminActiveSearchId'), adminActiveDateFrom: document.getElementById('adminActiveDateFrom'), adminActiveDateTo: document.getElementById('adminActiveDateTo'),
+            adminHistorySearchId: document.getElementById('adminHistorySearchId'), adminHistoryDateFrom: document.getElementById('adminHistoryDateFrom'), adminHistoryDateTo: document.getElementById('adminHistoryDateTo'),
+            exportExcelBtn: document.getElementById('exportExcelBtn'), productManagementCard: document.getElementById('productManagementCard'),
+            productFile: document.getElementById('productFile'), uploadProductsBtn: document.getElementById('uploadProductsBtn'),
+            uploadStatus: document.getElementById('uploadStatus'), fileNameDisplay: document.getElementById('fileNameDisplay'),
+            userEmailDisplay: document.getElementById('userEmailDisplay'), logoutBtn: document.getElementById('logoutBtn')
         };
 
         // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
-        const getRequestStatusColor = (s) => {
+        const getRequestStatusColor = (s, req) => {
             if (s === 'pending' || s === 'processing_partial_items') return 'border-l-4 border-red-500 bg-red-50';
             if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped', 'completed_incomplete', 'novelty_review'].includes(s)) return 'border-l-4 border-yellow-500 bg-yellow-50';
-            if (s === 'completed') return 'border-l-4 border-green-500 bg-green-50';
+            if (s === 'completed') {
+                return req.novelty ? 'border-l-4 border-yellow-500 bg-yellow-50' : 'border-l-4 border-green-500 bg-green-50';
+            }
             if (s === 'cancelled') return 'border-l-4 border-red-800 bg-red-100';
             return 'border-l-4 border-gray-300 bg-gray-50';
         };
@@ -226,7 +208,7 @@
             }
             return statusMap[s] || s;
         };
-
+        
         // --- AUTENTICACIÓN Y ARRANQUE ---
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -239,7 +221,6 @@
             } else { window.location.href = 'index.html'; }
         });
 
-        // --- LÓGICA DE LA INTERFAZ ---
         dom.logoutBtn.onclick = () => auth.signOut();
         
         function setupUIForUser() {
@@ -284,12 +265,14 @@
                 const myShipped = allMyRequests.filter(r => r.status === 'shipped');
                 const myActive = applyFilters(allMyRequests.filter(r => !['completed', 'completed_incomplete', 'novelty_review', 'cancelled', 'shipped'].includes(r.status)), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
                 const myNovelty = applyFilters(allMyRequests.filter(r => ['completed_incomplete', 'novelty_review'].includes(r.status)), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
-                const myHistory = applyFilters(allMyRequests.filter(r => r.status === 'completed' || r.status === 'cancelled'), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
+                const myCompleted = applyFilters(allMyRequests.filter(r => r.status === 'completed'), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
+                const myCancelled = applyFilters(allMyRequests.filter(r => r.status === 'cancelled'), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
 
                 renderSection('myShippedRequests', dom.myShippedRequests, myShipped, 'requester', "No tienes traslados para recibir.");
                 renderSection('myPendingRequests', dom.myPendingRequests, myActive, 'requester', "No tienes solicitudes activas.");
                 renderSection('myNoveltyRequests', dom.myNoveltyRequests, myNovelty, 'requester', "No tienes solicitudes con novedad.");
-                renderSection('myHistoryRequests', dom.myHistoryRequests, myHistory, 'requester', "No tienes historial de solicitudes.");
+                renderSection('myCompletedRequests', dom.myCompletedRequests, myCompleted, 'requester', "No tienes solicitudes completadas.");
+                renderSection('myCancelledRequests', dom.myCancelledRequests, myCancelled, 'requester', "No tienes solicitudes canceladas.");
             } else {
                 const pendingForReview = applyFilters(sortedRequests.filter(r => ['pending', 'processing_partial_items'].includes(r.status)), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
                 const pendingForNt = applyFilters(sortedRequests.filter(r => r.status.startsWith('pending_nt')), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
@@ -388,7 +371,7 @@
                 if (req.status === 'completed_incomplete') {
                      contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_novelty_review" class="action-btn w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-3 rounded-md">Iniciar Revisión de Novedad</button></div>`;
                 }
-                if (req.status === 'novelty_review') {
+                if (req.status === 'novelty_review' && role === 'admin') {
                     contentHtml += `<div id="noveltyForm-${req.id}" class="mt-4 p-4 bg-gray-100 border-t-2 space-y-4"><h5 class="font-bold text-lg">Gestionar Novedad</h5><div><label class="block text-sm font-medium">Causa:</label><select id="noveltyReason-${req.id}" data-request-id="${req.id}" class="novelty-input mt-1 block w-full p-2 border rounded-md"><option value="" selected disabled>-- Seleccione --</option><option value="Error de empaque">Error de empaque</option><option value="Perdida en transporte">Pérdida en transporte</option><option value="Otro">Otro</option></select></div><div id="noveltyOtherDiv-${req.id}" class="hidden"><label for="noveltyOtherReason-${req.id}" class="block text-sm font-medium">Especifique:</label><input type="text" id="noveltyOtherReason-${req.id}" data-request-id="${req.id}" class="novelty-input mt-1 block w-full p-2 border rounded-md"></div><div><label for="noveltySolution-${req.id}" class="block text-sm font-medium">Solución:</label><textarea id="noveltySolution-${req.id}" data-request-id="${req.id}" rows="3" class="novelty-input mt-1 block w-full p-2 border rounded-md"></textarea></div><button data-request-id="${req.id}" data-action="finalize_novelty" class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md disabled:bg-gray-400" disabled>Finalizar Novedad</button></div>`;
                 }
             }
