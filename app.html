@@ -64,6 +64,8 @@
                     <h4 class="text-lg font-medium text-gray-700 mb-2">Activas</h4>
                     <div id="myPendingRequests" class="grid gap-4 mb-6"></div>
                     <h4 class="text-lg font-medium text-gray-700 mb-2">Historial</h4>
+                    <h5 class="text-md font-semibold text-yellow-600 mb-2">Con Novedad</h5>
+                    <div id="myNoveltyRequests" class="grid gap-4 mb-6"></div>
                     <div id="myHistoryRequests" class="grid gap-4"></div>v>
                 </div>
             </div>
@@ -120,6 +122,8 @@
                 <div class="max-h-[80vh] overflow-y-auto">
                     <h3 class="text-lg font-bold text-black mb-2">Completadas</h3>
                     <div id="adminCompletedRequests" class="grid gap-4 mb-6"></div>
+                    <h3 class="text-lg font-bold text-black mb-2">Con Novedad</h3>
+                    <div id="adminNoveltyRequests" class="grid gap-4 mb-6"></div>
                     <h3 class="text-lg font-bold text-black mb-2">Canceladas</h3>
                     <div id="adminCancelledRequests" class="grid gap-4"></div>
                 </div>
@@ -166,10 +170,11 @@
             requesterName: document.getElementById('requesterName'), searchInput: document.getElementById('searchInput'),
             requesterView: document.getElementById('requesterView'), adminView: document.getElementById('adminView'),
             myShippedRequests: document.getElementById('myShippedRequests'), myPendingRequests: document.getElementById('myPendingRequests'), 
-            myHistoryRequests: document.getElementById('myHistoryRequests'), 
+            myHistoryRequests: document.getElementById('myHistoryRequests'), myNoveltyRequests: document.getElementById('myNoveltyRequests')
             adminPendingRequests: document.getElementById('adminPendingRequests'), adminPendingNtRequests: document.getElementById('adminPendingNtRequests'),
             adminReadyToShipRequests: document.getElementById('adminReadyToShipRequests'),adminShippingDetailsRequests: document.getElementById('adminShippingDetailsRequests'),
-            adminShippedRequests: document.getElementById('adminShippedRequests'), adminCompletedRequests: document.getElementById('adminCompletedRequests'), 
+            adminShippedRequests: document.getElementById('adminShippedRequests'), adminCompletedRequests: document.getElementById('adminCompletedRequests'),
+            adminNoveltyRequests: document.getElementById('adminNoveltyRequests'),
             adminCancelledRequests: document.getElementById('adminCancelledRequests'), requesterSearchId: document.getElementById('requesterSearchId'), 
             requesterDateFrom: document.getElementById('requesterDateFrom'), requesterDateTo: document.getElementById('requesterDateTo'),
             adminActiveSearchId: document.getElementById('adminActiveSearchId'), adminActiveDateFrom: document.getElementById('adminActiveDateFrom'),
@@ -195,7 +200,7 @@ const getRequestStatusColor = (s) => {
         return 'border-l-4 border-green-500 bg-green-50';
     }
     // 4. RECIBIDO INCOMPLETO (AMARILLO FUERTE)
-    if (s === 'completed_incomplete') {
+    if (s === 'completed_incomplete' || s === 'novelty_review') {
         return 'border-l-4 border-yellow-500 bg-yellow-50';
     }
     // 5. CANCELADAS (ROJO OSCURO)
@@ -215,7 +220,8 @@ const getRequestStatusColor = (s) => {
             'shipping_details': 'Pendiente de Guía y Envío',
             'shipped': 'Enviado Por Recibir',
             'completed':'Recibido Completo', 
-            'completed_incomplete':'Recibido Incompleto',
+            'completed_incomplete': 'Recibido Incompleto (Con Novedad)',
+            'novelty_review': 'En Revisión de Novedad',
             'cancelled':'Cancelado'
         }[s] || s);
 
@@ -267,42 +273,50 @@ const getRequestStatusColor = (s) => {
              }
              return filtered;
         }
-        
-        function renderAllSections() {
-            if (!currentUserData) return;
-            const { name, role } = currentUserData;
-            const sortedRequests = allTransferRequests.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+    // --- FUNCIÓN 'renderAllSections' COMPLETA ---
+function renderAllSections() {
+    if (!currentUserData) return;
+    const { name, role } = currentUserData;
+    const sortedRequests = allTransferRequests.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
 
-            if (role === 'requester') {
-                const allMyRequests = sortedRequests.filter(r => r.requesterName === name);
-                const myShipped = allMyRequests.filter(r => r.status === 'shipped');
-                const myActive = applyFilters(allMyRequests.filter(r => ['pending', 'processing_partial_items', 'pending_nt_start', 'pending_nt_active'].includes(r.status)), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
-                const myHistory = applyFilters(allMyRequests.filter(r => r.status.startsWith('completed') || r.status === 'cancelled'), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
-
-                renderSection('myShippedRequests', dom.myShippedRequests, myShipped, 'requester', "No tienes traslados para recibir.");
-                renderSection('myPendingRequests', dom.myPendingRequests, myActive, 'requester', "No tienes solicitudes activas.");
-                renderSection('myHistoryRequests', dom.myHistoryRequests, myHistory, 'requester', "No tienes historial de solicitudes.");
-            } else {
-                const pendingForReview = applyFilters(sortedRequests.filter(r => r.status === 'pending' || r.status === 'processing_partial_items'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
-                const pendingForNt = applyFilters(sortedRequests.filter(r => r.status.startsWith('pending_nt')), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
-                const readyToShip = applyFilters(sortedRequests.filter(r => r.status === 'ready_to_ship'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
-                const shippingDetails = applyFilters(sortedRequests.filter(r => r.status === 'shipping_details'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
-                const pendingForReception = applyFilters(sortedRequests.filter(r => r.status === 'shipped'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
-                
-                renderSection('adminPendingRequests', dom.adminPendingRequests, pendingForReview, 'admin', "No hay solicitudes pendientes de revisión.");
-                renderSection('adminPendingNtRequests', dom.adminPendingNtRequests, pendingForNt, 'admin', "No hay solicitudes pendientes de NT.");
-                renderSection('adminReadyToShipRequests', dom.adminReadyToShipRequests, readyToShip, 'admin', "No hay solicitudes listas para enviar.");
-                renderSection('adminShippingDetailsRequests', dom.adminShippingDetailsRequests, shippingDetails, 'admin', "No hay envíos pendientes de detalles.");
-                renderSection('adminShippedRequests', dom.adminShippedRequests, pendingForReception, 'admin', "No hay solicitudes pendientes de recibir.");
-                
-                const completedReqs = applyFilters(sortedRequests.filter(r => r.status.startsWith('completed')), dom.adminHistorySearchId, dom.adminHistoryDateFrom, dom.adminHistoryDateTo);
-                const cancelledReqs = applyFilters(sortedRequests.filter(r => r.status === 'cancelled'), dom.adminHistorySearchId, dom.adminHistoryDateFrom, dom.adminHistoryDateTo);
-                
-                renderSection('adminCompletedRequests', dom.adminCompletedRequests, completedReqs, 'admin', "No hay solicitudes completadas.");
-                renderSection('adminCancelledRequests', dom.adminCancelledRequests, cancelledReqs, 'admin', "No hay solicitudes canceladas.");
-            }
-        }
+    if (role === 'requester') {
+        const allMyRequests = sortedRequests.filter(r => r.requesterName === name);
         
+        const myShipped = allMyRequests.filter(r => r.status === 'shipped');
+        const myActive = applyFilters(allMyRequests.filter(r => ['pending', 'processing_partial_items', 'pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details'].includes(r.status)), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
+        
+        // Filtrado para la vista de Solicitante
+        const myHistory = applyFilters(allMyRequests.filter(r => r.status === 'completed' || r.status === 'cancelled'), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
+        const myNovelty = applyFilters(allMyRequests.filter(r => r.status === 'completed_incomplete' || r.status === 'novelty_review'), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
+
+        renderSection('myShippedRequests', dom.myShippedRequests, myShipped, 'requester', "No tienes traslados para recibir.");
+        renderSection('myPendingRequests', dom.myPendingRequests, myActive, 'requester', "No tienes solicitudes activas.");
+        renderSection('myNoveltyRequests', dom.myNoveltyRequests, myNovelty, 'requester', "No tienes solicitudes con novedad.");
+        renderSection('myHistoryRequests', dom.myHistoryRequests, myHistory, 'requester', "No tienes historial de solicitudes.");
+
+    } else { // Rol de Admin
+        const pendingForReview = applyFilters(sortedRequests.filter(r => r.status === 'pending' || r.status === 'processing_partial_items'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
+        const pendingForNt = applyFilters(sortedRequests.filter(r => r.status.startsWith('pending_nt')), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
+        const readyToShip = applyFilters(sortedRequests.filter(r => r.status === 'ready_to_ship'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
+        const shippingDetails = applyFilters(sortedRequests.filter(r => r.status === 'shipping_details'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
+        const pendingForReception = applyFilters(sortedRequests.filter(r => r.status === 'shipped'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
+        
+        renderSection('adminPendingRequests', dom.adminPendingRequests, pendingForReview, 'admin', "No hay solicitudes pendientes de revisión.");
+        renderSection('adminPendingNtRequests', dom.adminPendingNtRequests, pendingForNt, 'admin', "No hay solicitudes pendientes de NT.");
+        renderSection('adminReadyToShipRequests', dom.adminReadyToShipRequests, readyToShip, 'admin', "No hay solicitudes listas para enviar.");
+        renderSection('adminShippingDetailsRequests', dom.adminShippingDetailsRequests, shippingDetails, 'admin', "No hay envíos pendientes de detalles.");
+        renderSection('adminShippedRequests', dom.adminShippedRequests, pendingForReception, 'admin', "No hay solicitudes pendientes de recibir.");
+        
+        // Filtrado para la vista de Historial del Admin
+        const completedReqs = applyFilters(sortedRequests.filter(r => r.status === 'completed'), dom.adminHistorySearchId, dom.adminHistoryDateFrom, dom.adminHistoryDateTo);
+        const noveltyReqs = applyFilters(sortedRequests.filter(r => r.status === 'completed_incomplete' || r.status === 'novelty_review'), dom.adminHistorySearchId, dom.adminHistoryDateFrom, dom.adminHistoryDateTo);
+        const cancelledReqs = applyFilters(sortedRequests.filter(r => r.status === 'cancelled'), dom.adminHistorySearchId, dom.adminHistoryDateFrom, dom.adminHistoryDateTo);
+        
+        renderSection('adminCompletedRequests', dom.adminCompletedRequests, completedReqs, 'admin', "No hay solicitudes completadas.");
+        renderSection('adminNoveltyRequests', dom.adminNoveltyRequests, noveltyReqs, 'admin', "No hay solicitudes con novedad.");
+        renderSection('adminCancelledRequests', dom.adminCancelledRequests, cancelledReqs, 'admin', "No hay solicitudes canceladas.");
+    }
+}
         function renderSection(sectionId, div, data, role, emptyMessage) {
             div.innerHTML = '';
             if (!div) return;
@@ -326,13 +340,12 @@ const getRequestStatusColor = (s) => {
                 div.appendChild(button);
             }
         }
-        // --- FUNCIÓN 'createRequestCard' COMPLETA Y ACTUALIZADA ---
+// --- FUNCIÓN 'createRequestCard' COMPLETA Y CON GESTIÓN DE NOVEDADES ---
 function createRequestCard(req, role) {
     const isExpanded = expandedRequestsState.has(req.id);
     const card = document.createElement('div');
     card.className = `p-4 rounded-lg shadow-sm flex flex-col ${getRequestStatusColor(req.status)}`;
 
-    const isShipped = req.status === 'shipped';
     const hasItems = req.items && req.items.length > 0;
     
     const allNtItemsChecked = hasItems && req.status === 'pending_nt_active' && req.items.every(item => item.nt_checked);
@@ -340,74 +353,78 @@ function createRequestCard(req, role) {
     const canProceedFromNt = allNtItemsChecked && hasNtNumber;
 
     const itemsHtml = hasItems ? (req.items || []).map((item, index) => {
-        if (role === 'admin' && req.status === 'pending_nt_active') {
-            const itemChecked = item.nt_checked === true;
-            const itemBgColor = itemChecked ? 'bg-green-100' : 'bg-red-100';
-            const itemBorderColor = itemChecked ? 'border-green-200' : 'border-red-200';
-            return `<li class="p-2 rounded-md border ${itemBorderColor} ${itemBgColor} flex justify-between items-center text-sm transition-colors"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">Enviado: <b>${item.sentQuantity}</b></div></div><input type="checkbox" ${itemChecked ? 'checked' : ''} data-request-id="${req.id}" data-item-index="${index}" class="nt-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"></li>`;
-        }
-        
         let quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
         if (item.sentQuantity !== undefined) { quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`; }
         if (item.receivedQuantity !== undefined) {
             const color = item.receivedQuantity < item.sentQuantity ? 'text-red-600' : 'text-green-700';
             quantityDisplay += ` | Recibido: <b class="${color}">${item.receivedQuantity}</b>`;
         }
-        const receptionInput = (role === 'requester' && isShipped) ? `<div class="flex items-center"><label class="text-sm mr-2">Recibido:</label><input type="number" value="${item.sentQuantity}" data-request-id="${req.id}" data-item-index="${index}" class="reception-qty-input w-20 p-1 border rounded-md text-center"></div>` : ``;
+        const receptionInput = (role === 'requester' && req.status === 'shipped') ? `<div class="flex items-center"><label class="text-sm mr-2">Recibido:</label><input type="number" value="${item.sentQuantity}" data-request-id="${req.id}" data-item-index="${index}" class="reception-qty-input w-20 p-1 border rounded-md text-center"></div>` : ``;
         const adminInput = (role === 'admin' && req.status === 'processing_partial_items') ? `<input type="number" value="${item.sentQuantity ?? item.quantity}" data-request-id="${req.id}" data-item-index="${index}" class="admin-qty-input w-20 p-1 border rounded-md text-center">` : ``;
+        const itemCheckedHtml = (role === 'admin' && req.status === 'pending_nt_active') ? `<input type="checkbox" ${item.nt_checked ? 'checked' : ''} data-request-id="${req.id}" data-item-index="${index}" class="nt-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">` : '';
+        const itemBgColor = (role === 'admin' && req.status === 'pending_nt_active') ? (item.nt_checked ? 'bg-green-100' : 'bg-red-100') : 'bg-white';
         
-        return `<li class="p-2 rounded-md bg-white flex justify-between items-center text-sm"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">${quantityDisplay}</div></div>${receptionInput}${adminInput}</li>`;
+        return `<li class="p-2 rounded-md border ${itemBgColor} flex justify-between items-center text-sm"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">${quantityDisplay}</div></div>${receptionInput}${adminInput}${itemCheckedHtml}</li>`;
     }).join('') : '<p class="text-sm text-gray-500 italic">No hay artículos en esta solicitud.</p>';
 
     let adminActionsHtml = '';
+    let noveltyFormHtml = '';
+
+    // Lógica de botones para el Administrador
     if (role === 'admin') {
-        let buttons = '';
-        if (req.status === 'pending') {
-            buttons += `<button data-request-id="${req.id}" data-action="start_processing" class="action-btn bg-gray-800 hover:bg-black text-white text-xs font-semibold py-2 px-3 rounded-md">Iniciar revisión</button>`;
-        }
         if (req.status.startsWith('processing')) {
-            buttons += `<button data-request-id="${req.id}" data-action="finalize_processing" class="action-btn bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Finalizar Revisión</button>`;
+            adminActionsHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="finalize_processing" class="action-btn bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Finalizar Revisión</button></div>`;
         }
         if (req.status === 'pending_nt_start') {
-            buttons += `<button data-request-id="${req.id}" data-action="start_nt_preparation" class="action-btn bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2 px-3 rounded-md">Iniciar Preparación NT</button>`;
+            adminActionsHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_nt_preparation" class="action-btn bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2 px-3 rounded-md">Iniciar Preparación NT</button></div>`;
         }
         if (req.status === 'pending_nt_active') {
             adminActionsHtml += `<div class="mt-4 space-y-2"><label for="ntNumber-${req.id}" class="text-sm font-medium text-gray-700">Número de Nota de Traslado (Obligatorio):</label><input type="text" id="ntNumber-${req.id}" data-request-id="${req.id}" value="${req.ntNumber || ''}" class="nt-number-input w-full mt-1 border rounded-md p-2" placeholder="Ingresa el número de NT..."></div>`;
-            buttons += `<button data-request-id="${req.id}" data-action="return_to_pending" class="action-btn bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Devolver a Revisión</button>`;
-            buttons += `<button data-request-id="${req.id}" data-action="ready_to_ship" class="action-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" ${!canProceedFromNt ? 'disabled' : ''}>Marcar como Listo para Enviar</button>`;
+            adminActionsHtml += `<div class="mt-2 flex justify-end gap-2"><button data-request-id="${req.id}" data-action="return_to_pending" class="action-btn bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Devolver a Revisión</button><button data-request-id="${req.id}" data-action="ready_to_ship" class="action-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" ${!canProceedFromNt ? 'disabled' : ''}>Marcar como Listo para Enviar</button></div>`;
         }
         if (req.status === 'ready_to_ship') {
             adminActionsHtml += `<div class="mt-4 space-y-2"><label for="shippingNotes-${req.id}" class="text-sm font-medium text-gray-700">Observaciones de Envío (Opcional):</label><textarea id="shippingNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2" placeholder="Ej: Se envía en 2 cajas...">${req.shippingNotes || ''}</textarea><button data-request-id="${req.id}" class="save-shipping-note-btn mt-1 text-xs bg-gray-700 text-white px-3 py-1.5 rounded-md hover:bg-gray-800">Guardar Nota</button></div>`;
-            buttons += `<button data-request-id="${req.id}" data-action="proceed_to_shipping" class="action-btn bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Proceder al Envío</button>`;
+            adminActionsHtml += `<div class="mt-2 flex justify-end"><button data-request-id="${req.id}" data-action="proceed_to_shipping" class="action-btn bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Proceder al Envío</button></div>`;
         }
         if (req.status === 'shipping_details') {
             adminActionsHtml += `<div class="mt-4 space-y-3 p-3 bg-gray-50 rounded-lg border"><p class="font-semibold text-gray-800">¿Esta orden tiene número de guía?</p><div class="flex items-center gap-x-4"><label><input type="radio" name="hasTracking-${req.id}" value="yes" class="tracking-option"> Sí</label><label><input type="radio" name="hasTracking-${req.id}" value="no" class="tracking-option" checked> No</label></div><div id="trackingNumberDiv-${req.id}" class="hidden mt-2"><label for="trackingNumber-${req.id}" class="block text-sm font-medium text-gray-700">Número de Guía:</label><input type="text" id="trackingNumber-${req.id}" class="w-full mt-1 border rounded-md p-2"></div></div>`;
-            buttons += `<button data-request-id="${req.id}" class="finalize-shipment-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Guardar y Marcar como Enviado</button>`;
+            adminActionsHtml += `<div class="mt-2"><button data-request-id="${req.id}" class="finalize-shipment-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Guardar y Marcar como Enviado</button></div>`;
         }
-        if (['pending', 'processing_partial_items', 'pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details'].includes(req.status)) {
-            buttons += `<button data-request-id="${req.id}" data-action="cancel" class="action-btn bg-red-700 hover:bg-red-800 text-white text-xs font-semibold py-2 px-3 rounded-md">Cancelar</button>`;
-        }
-        if (buttons) {
-            adminActionsHtml += `<div class="mt-4 border-t pt-4 flex justify-end items-center flex-wrap gap-2">${buttons}</div>`;
+        if (req.status === 'completed_incomplete') {
+             adminActionsHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_novelty_review" class="action-btn w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-3 rounded-md">Iniciar Revisión de Novedad</button></div>`;
         }
     }
     
-    let requesterActionsHtml = '';
-    if (role === 'requester' && req.status === 'pending') {
-        requesterActionsHtml = `<div class="flex flex-col space-y-2"><button data-request-id="${req.id}" class="edit-my-request-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-1 px-2 rounded-md">Editar</button><button data-request-id="${req.id}" class="delete-my-request-btn bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-1 px-2 rounded-md">Eliminar</button></div>`;
+    // Formulario de Novedad (visible para Admin)
+    if (role === 'admin' && req.status === 'novelty_review') {
+        noveltyFormHtml = `
+            <div id="noveltyForm-${req.id}" class="mt-4 p-4 bg-gray-50 border-t-2 border-yellow-300 space-y-4">
+                <h5 class="font-bold text-lg text-gray-800">Gestionar Novedad</h5>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Causa de la novedad:</label>
+                    <select id="noveltyReason-${req.id}" class="novelty-input mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        <option value="" selected disabled>-- Seleccione una opción --</option>
+                        <option value="Error de empaque">Error de empaque</option>
+                        <option value="Perdida en transporte">Pérdida en transporte</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div id="noveltyOtherDiv-${req.id}" class="hidden">
+                    <label for="noveltyOtherReason-${req.id}" class="block text-sm font-medium text-gray-700">Especifique la causa:</label>
+                    <input type="text" id="noveltyOtherReason-${req.id}" class="novelty-input mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label for="noveltySolution-${req.id}" class="block text-sm font-medium text-gray-700">Describa la novedad y la solución del caso:</label>
+                    <textarea id="noveltySolution-${req.id}" rows="3" class="novelty-input mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
+                </div>
+                <button data-request-id="${req.id}" class="finalize-novelty-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md disabled:bg-gray-400" disabled>Finalizar Novedad</button>
+            </div>
+        `;
     }
 
-    let receptionFormHtml = '';
-    if (role === 'requester' && isShipped) {
-        receptionFormHtml = `<div class="mt-4 border-t-2 border-blue-200 pt-4 space-y-3"><h5 class="font-bold text-md text-blue-700">Confirmar recepción</h5><div><label class="block text-sm font-medium text-gray-700">Observaciones de recepción:</label><textarea id="receptionNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2" placeholder="Ej: La caja llegó dañada..."></textarea></div><button data-request-id="${req.id}" class="finalize-reception-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Finalizar y confirmar Recepción</button></div>`;
-    }
-    
     const reqDate = req.deliveryDate ? new Date(req.deliveryDate + 'T00:00:00').toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No especificada';
-    
-    // --- LÍNEA MODIFICADA AQUÍ ---
     const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '';
-    
-    const hasDetailsToShow = hasItems || req.requesterNotes || req.adminNotes || req.ntNumber || req.shippingNotes || req.shippingInfo || (req.reception && req.reception.notes) || adminActionsHtml || receptionFormHtml;
+    const hasDetailsToShow = hasItems || req.requesterNotes || req.adminNotes || req.ntNumber || req.shippingNotes || req.shippingInfo || (req.reception && req.reception.notes) || req.novelty || adminActionsHtml || noveltyFormHtml;
 
     card.innerHTML = `
         <div class="flex justify-between items-start">
@@ -418,7 +435,6 @@ function createRequestCard(req, role) {
                 <p class="text-sm mt-1">Fecha Requerida: <b>${reqDate}</b></p>
                 <span class="inline-block mt-2 px-2 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-800">${translateStatus(req.status)}</span>
             </div>
-            ${requesterActionsHtml}
         </div>
         <div id="details-${req.id}" class="flex-grow ${isExpanded ? '' : 'hidden'} mt-4 pt-4 border-t border-gray-200">
             <div class="space-y-3">
@@ -428,19 +444,21 @@ function createRequestCard(req, role) {
                 ${req.shippingNotes ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Obs. de Envío:</p><p class="text-sm text-gray-800 italic">"${req.shippingNotes}"</p></div>` : ''}
                 ${req.shippingInfo ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Guía de Envío:</p><p class="text-sm font-bold text-gray-900">${req.shippingInfo.hasTracking ? req.shippingInfo.trackingNumber : 'Sin número de guía'}</p></div>` : ''}
                 ${(req.reception && req.reception.notes) ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Obs. de Recepción:</p><p class="text-sm text-green-900 italic">"${req.reception.notes}"</p></div>` : ''}
+                ${req.novelty ? `<div class="p-3 bg-yellow-100 rounded-lg border border-yellow-300"><p class="text-sm font-semibold text-yellow-800">Detalle de Novedad:</p><p class="text-sm text-gray-800"><b>Causa:</b> ${req.novelty.reason}</p><p class="text-sm text-gray-800"><b>Solución:</b> ${req.novelty.solution}</p></div>` : ''}
             </div>
-            ${(role === 'admin' && req.status.startsWith('processing')) ? `<div class="mt-4"><label for="adminNotes-${req.id}" class="text-sm font-medium text-gray-700">Añadir/Editar Nota de Revisión:</label><textarea id="adminNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.adminNotes || ''}</textarea><button data-request-id="${req.id}" class="save-admin-note-btn mt-1 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-black">Guardar Nota</button></div>` : ''}
             
             <h5 class="font-bold text-gray-700 mt-3 mb-2">Items:</h5>
             <ul class="space-y-2">${itemsHtml}</ul>
             ${adminActionsHtml}
-            ${receptionFormHtml}
+            ${noveltyFormHtml}
         </div>
         ${hasDetailsToShow ? `<div class="text-center mt-2"><button data-request-id="${req.id}" class="toggle-details-btn text-sm font-semibold text-blue-600 hover:text-blue-800 py-1 px-3 rounded-full hover:bg-blue-50 transition-colors">${isExpanded ? 'Ver menos' : 'Ver más'}</button></div>` : ''}
     `;
 
-    // Asignación de todos los listeners
     card.querySelectorAll('.action-btn').forEach(b => b.onclick = handleAdminAction);
+    card.querySelectorAll('.finalize-novelty-btn').forEach(b => b.onclick = handleFinalizeNovelty);
+    card.querySelectorAll('.novelty-input').forEach(i => i.oninput = () => validateNoveltyForm(req.id));
+    card.querySelector(`#noveltyReason-${req.id}`)?.addEventListener('change', () => validateNoveltyForm(req.id));
     card.querySelectorAll('.finalize-reception-btn').forEach(b => b.onclick = handleFinalizeReception);
     card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
     card.querySelectorAll('.delete-my-request-btn').forEach(b => b.onclick = handleDeleteMyRequest);
@@ -454,6 +472,69 @@ function createRequestCard(req, role) {
     card.querySelectorAll('.nt-number-input').forEach(input => input.onchange = handleNtNumberInput);
 
     return card;
+}
+    // --- NUEVAS FUNCIONES PARA GESTIÓN DE NOVEDADES ---
+
+function validateNoveltyForm(requestId) {
+    const reasonSelect = document.getElementById(`noveltyReason-${requestId}`);
+    const otherDiv = document.getElementById(`noveltyOtherDiv-${requestId}`);
+    const otherReasonInput = document.getElementById(`noveltyOtherReason-${requestId}`);
+    const solutionTextarea = document.getElementById(`noveltySolution-${requestId}`);
+    const finalizeBtn = document.querySelector(`.finalize-novelty-btn[data-request-id="${requestId}"]`);
+
+    if (!reasonSelect || !otherDiv || !otherReasonInput || !solutionTextarea || !finalizeBtn) return;
+
+    if (reasonSelect.value === 'Otro') {
+        otherDiv.classList.remove('hidden');
+    } else {
+        otherDiv.classList.add('hidden');
+    }
+
+    const isReasonValid = reasonSelect.value && (reasonSelect.value !== 'Otro' || otherReasonInput.value.trim() !== '');
+    const isSolutionValid = solutionTextarea.value.trim() !== '';
+
+    if (isReasonValid && isSolutionValid) {
+        finalizeBtn.disabled = false;
+        finalizeBtn.classList.remove('disabled:bg-gray-400');
+    } else {
+        finalizeBtn.disabled = true;
+        finalizeBtn.classList.add('disabled:bg-gray-400');
+    }
+}
+
+async function handleFinalizeNovelty(event) {
+    const button = event.currentTarget;
+    const requestId = button.dataset.requestId;
+    button.disabled = true;
+    button.textContent = 'Guardando...';
+
+    const reasonSelect = document.getElementById(`noveltyReason-${requestId}`);
+    let reason = reasonSelect.value;
+    if (reason === 'Otro') {
+        reason = document.getElementById(`noveltyOtherReason-${requestId}`).value.trim();
+    }
+    const solution = document.getElementById(`noveltySolution-${requestId}`).value.trim();
+
+    const noveltyData = {
+        reason: reason,
+        solution: solution,
+        resolvedBy: currentUserData.user.email,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    try {
+        const reqRef = transfersCollection.doc(requestId);
+        await reqRef.update({
+            status: 'completed',
+            novelty: noveltyData
+        });
+        expandedRequestsState.delete(requestId);
+    } catch (e) {
+        console.error("Error al finalizar la novedad:", e);
+        alert("Ocurrió un error.");
+        button.disabled = false;
+        button.textContent = 'Finalizar Novedad';
+    }
 }
 
         function renderProducts(productsToRender) {
@@ -492,8 +573,8 @@ function createRequestCard(req, role) {
         }
         
         // --- MANEJADORES DE EVENTOS Y ACCIONES ---
-        
-        async function handleAdminAction(evento) {
+        // --- FUNCIÓN 'handleAdminAction' COMPLETA ---
+async function handleAdminAction(evento) {
     const { requestId, action } = evento.currentTarget.dataset;
     const reqRef = transfersCollection.doc(requestId);
     let updateData = {};
@@ -538,22 +619,31 @@ function createRequestCard(req, role) {
                 });
                 updateData = { 
                     status: 'pending',
+                    items: resetItems,
                     adminNotes: firebase.firestore.FieldValue.delete(), 
-                    items: resetItems 
+                    ntNumber: firebase.firestore.FieldValue.delete(),
+                    shippingNotes: firebase.firestore.FieldValue.delete(),
+                    shippingInfo: firebase.firestore.FieldValue.delete(),
+                    reception: firebase.firestore.FieldValue.delete(),
+                    novelty: firebase.firestore.FieldValue.delete()
                 };
                 expandedRequestsState.delete(requestId);
                 break;
             
-            // ACCIÓN MODIFICADA
             case 'ready_to_ship':
                 if (!confirm("¿Marcar esta solicitud como LISTA PARA ENVIAR?")) return;
                 updateData = { status: 'ready_to_ship' };
                 expandedRequestsState.add(requestId);
                 break;
             
-            // NUEVA ACCIÓN
             case 'proceed_to_shipping':
                 updateData = { status: 'shipping_details' };
+                expandedRequestsState.add(requestId);
+                break;
+            
+            // NUEVO CASE AÑADIDO
+            case 'start_novelty_review':
+                updateData = { status: 'novelty_review' };
                 expandedRequestsState.add(requestId);
                 break;
 
