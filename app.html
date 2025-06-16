@@ -315,7 +315,7 @@
                 div.appendChild(button);
             }
         }
-        // --- FUNCIÓN 'createRequestCard' COMPLETA Y CORREGIDA ---
+        // --- FUNCIÓN 'createRequestCard' COMPLETA Y DEFINITIVA ---
 function createRequestCard(req, role) {
     const isExpanded = expandedRequestsState.has(req.id);
     const card = document.createElement('div');
@@ -324,7 +324,7 @@ function createRequestCard(req, role) {
     const isShipped = req.status === 'shipped';
     const hasItems = req.items && req.items.length > 0;
     
-    // --- LÓGICA DE VALIDACIÓN MEJORADA ---
+    // Lógica de validación para el botón de NT
     const allNtItemsChecked = hasItems && req.status === 'pending_nt_active' && req.items.every(item => item.nt_checked);
     const hasNtNumber = req.status === 'pending_nt_active' && req.ntNumber && req.ntNumber.trim() !== '';
     const canProceedFromNt = allNtItemsChecked && hasNtNumber;
@@ -362,7 +362,6 @@ function createRequestCard(req, role) {
             buttons += `<button data-request-id="${req.id}" data-action="start_nt_preparation" class="action-btn bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2 px-3 rounded-md">Iniciar Preparación NT</button>`;
         }
         if (req.status === 'pending_nt_active') {
-            // --- CAMPO OBLIGATORIO DE NOTA DE TRASLADO (NT) ---
             adminActionsHtml += `
                 <div class="mt-4 space-y-2">
                     <label for="ntNumber-${req.id}" class="text-sm font-medium text-gray-700">Número de Nota de Traslado (Obligatorio):</label>
@@ -422,9 +421,8 @@ function createRequestCard(req, role) {
     
     const reqDate = req.deliveryDate ? new Date(req.deliveryDate + 'T00:00:00').toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No especificada';
     const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleDateString('es-CO') : '';
-    const hasDetailsToShow = hasItems || req.requesterNotes || req.adminNotes || req.ntNumber || req.shippingNotes || req.shippingInfo || adminActionsHtml || receptionFormHtml;
+    const hasDetailsToShow = hasItems || req.requesterNotes || req.adminNotes || req.ntNumber || req.shippingNotes || req.shippingInfo || (req.reception && req.reception.notes) || adminActionsHtml || receptionFormHtml;
 
-    // --- HTML DE LA TARJETA MEJORADO PARA MOSTRAR TODA LA INFORMACIÓN GUARDADA ---
     card.innerHTML = `
         <div class="flex justify-between items-start">
             <div>
@@ -442,6 +440,7 @@ function createRequestCard(req, role) {
             ${req.ntNumber ? `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><p class="text-sm font-semibold text-orange-800">Nº Nota de Traslado:</p><p class="text-sm font-bold text-orange-900">${req.ntNumber}</p></div>` : ''}
             ${req.shippingNotes ? `<div class="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200"><p class="text-sm font-semibold text-blue-800">Obs. de Envío:</p><p class="text-sm text-blue-900 italic">"${req.shippingNotes}"</p></div>` : ''}
             ${req.shippingInfo ? `<div class="mb-3 p-3 bg-cyan-50 rounded-lg border border-cyan-200"><p class="text-sm font-semibold text-cyan-800">Guía de Envío:</p><p class="text-sm font-bold text-cyan-900">${req.shippingInfo.hasTracking ? req.shippingInfo.trackingNumber : 'Sin número de guía'}</p></div>` : ''}
+            ${(req.reception && req.reception.notes) ? `<div class="mb-3 p-3 bg-green-50 rounded-lg border border-green-200"><p class="text-sm font-semibold text-green-800">Obs. de Recepción:</p><p class="text-sm text-green-900 italic">"${req.reception.notes}"</p></div>` : ''}
             
             ${(role === 'admin' && req.status.startsWith('processing')) ? `<div class="mt-4"><label for="adminNotes-${req.id}" class="text-sm font-medium text-gray-700">Añadir/Editar Nota de Revisión:</label><textarea id="adminNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.adminNotes || ''}</textarea><button data-request-id="${req.id}" class="save-admin-note-btn mt-1 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-black">Guardar Nota</button></div>` : ''}
             
@@ -453,6 +452,7 @@ function createRequestCard(req, role) {
         ${hasDetailsToShow ? `<div class="text-center mt-2"><button data-request-id="${req.id}" class="toggle-details-btn text-sm font-semibold text-blue-600 hover:text-blue-800 py-1 px-3 rounded-full hover:bg-blue-50 transition-colors">${isExpanded ? 'Ver menos' : 'Ver más'}</button></div>` : ''}
     `;
 
+    // Asignación de todos los listeners
     card.querySelectorAll('.action-btn').forEach(b => b.onclick = handleAdminAction);
     card.querySelectorAll('.finalize-reception-btn').forEach(b => b.onclick = handleFinalizeReception);
     card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
@@ -464,8 +464,8 @@ function createRequestCard(req, role) {
     card.querySelectorAll('.save-shipping-note-btn').forEach(b => b.onclick = handleSaveShippingNote);
     card.querySelectorAll('.finalize-shipment-btn').forEach(b => b.onclick = handleFinalizeShipment);
     card.querySelectorAll('.tracking-option').forEach(radio => radio.onchange = handleTrackingOptionChange);
-    // --- NUEVO LISTENER PARA EL INPUT DE NT ---
-    card.querySelectorAll('.nt-number-input').forEach(input => input.oninput = handleNtNumberInput);
+    // Listener corregido para el input de NT
+    card.querySelectorAll('.nt-number-input').forEach(input => input.onchange = handleNtNumberInput);
 
     return card;
 }
@@ -875,46 +875,57 @@ async function handleFinalizeShipment(event) {
         }
 
         async function handleFinalizeReception(event) {
-            const button = event.currentTarget;
-            const requestId = button.dataset.requestId;
-            button.disabled = true;
-            button.textContent = 'Procesando...';
-            const receptionNotes = document.getElementById(`receptionNotes-${requestId}`).value;
-            const qtyInputs = document.querySelectorAll(`.reception-qty-input[data-request-id="${requestId}"]`);
-            const reqRef = transfersCollection.doc(requestId);
-            try {
-                const doc = await reqRef.get();
-                if (!doc.exists) throw new Error("Documento no encontrado.");
-                let items = doc.data().items;
-                let isComplete = true;
-                qtyInputs.forEach(input => {
-                    const index = parseInt(input.dataset.itemIndex, 10);
-                    const receivedQty = parseInt(input.value, 10);
-                    if (items[index]) {
-                        items[index].receivedQuantity = receivedQty;
-                        if (receivedQty < items[index].sentQuantity) {
-                            isComplete = false;
-                        }
-                    }
-                });
-                const newStatus = isComplete ? 'completed' : 'completed_incomplete';
-                const updatePayload = {
-                    status: newStatus,
-                    items: items,
-                    reception: {
-                        notes: receptionNotes,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        finalizedBy: currentUserData.user.email
-                    }
-                };
-                await reqRef.update(updatePayload);
-            } catch (error) {
-                console.error("Error al finalizar recepción:", error);
-                alert("Ocurrió un error. Inténtalo de nuevo.");
-                button.disabled = false;
-                button.textContent = 'Finalizar y Confirmar Recepción';
+    const button = event.currentTarget;
+    const requestId = button.dataset.requestId;
+    button.disabled = true;
+    button.textContent = 'Procesando...';
+    
+    // Obtenemos el valor del textarea de observaciones de recepción
+    const receptionNotes = document.getElementById(`receptionNotes-${requestId}`).value;
+    
+    const qtyInputs = document.querySelectorAll(`.reception-qty-input[data-request-id="${requestId}"]`);
+    const reqRef = transfersCollection.doc(requestId);
+    
+    try {
+        const doc = await reqRef.get();
+        if (!doc.exists) throw new Error("Documento no encontrado.");
+        
+        let items = doc.data().items;
+        let isComplete = true;
+        
+        qtyInputs.forEach(input => {
+            const index = parseInt(input.dataset.itemIndex, 10);
+            const receivedQty = parseInt(input.value, 10);
+            if (items[index]) {
+                items[index].receivedQuantity = receivedQty;
+                if (receivedQty < items[index].sentQuantity) {
+                    isComplete = false;
+                }
             }
-        }
+        });
+        
+        const newStatus = isComplete ? 'completed' : 'completed_incomplete';
+        
+        // --- PAYLOAD CORREGIDO ---
+        // Aseguramos que las 'receptionNotes' se guarden correctamente
+        const updatePayload = {
+            status: newStatus,
+            items: items,
+            reception: {
+                notes: receptionNotes, // Este es el campo clave
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                finalizedBy: currentUserData.user.email
+            }
+        };
+        
+        await reqRef.update(updatePayload);
+    } catch (error) {
+        console.error("Error al finalizar recepción:", error);
+        alert("Ocurrió un error. Inténtalo de nuevo.");
+        button.disabled = false;
+        button.textContent = 'Finalizar y Confirmar Recepción';
+    }
+}
 
         // --- FUNCIONES DE UTILIDAD Y GESTIÓN DE PRODUCTOS ---
         
