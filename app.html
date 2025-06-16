@@ -234,6 +234,7 @@
             } else { window.location.href = 'index.html'; }
         });
 
+        // --- LÓGICA DE LA INTERFAZ ---
         dom.logoutBtn.onclick = () => auth.signOut();
         
         function setupUIForUser() {
@@ -251,7 +252,6 @@
             }
         }
         
-        // --- LÓGICA DE RENDERIZADO Y FILTROS ---
         function applyFilters(requests, searchInput, dateFromInput, dateToInput) {
              const searchTerm = searchInput.value.toLowerCase().trim();
              const dateFrom = dateFromInput.value;
@@ -325,10 +325,7 @@
                 const button = document.createElement('button');
                 button.textContent = `Ver ${loadAmount} más... (${remaining} restantes)`;
                 button.className = 'w-full mt-4 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 py-2 px-4 rounded-lg';
-                button.onclick = () => {
-                    sectionDisplayCounts[sectionId] += LOAD_MORE_COUNT;
-                    renderAllSections();
-                };
+                button.onclick = () => { sectionDisplayCounts[sectionId] += LOAD_MORE_COUNT; renderAllSections(); };
                 div.appendChild(button);
             }
         }
@@ -360,6 +357,7 @@
 
             let contentHtml = '';
             
+            // --- Lógica de Contenido Dinámico ---
             if (role === 'admin') {
                 if (req.status === 'pending') {
                     contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_processing" class="action-btn w-full bg-gray-800 hover:bg-black text-white font-bold py-2 px-3 rounded-md">Iniciar Revisión</button></div>`;
@@ -435,6 +433,7 @@
             card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
             card.querySelectorAll('.nt-number-input').forEach(i => i.onchange = handleNtNumberInput);
             card.querySelectorAll('.tracking-option').forEach(r => r.onchange = handleTrackingOptionChange);
+            card.querySelectorAll('.reception-qty-input').forEach(i => i.onchange = () => {}); // Placeholder
             card.querySelectorAll('.novelty-input').forEach(i => i.oninput = () => validateNoveltyForm(i.dataset.requestId));
             
             return card;
@@ -446,84 +445,80 @@
             const reqRef = transfersCollection.doc(requestId);
             let updateData = {};
 
-            switch(action) {
-                case 'start_processing':
+            const actions = {
+                start_processing: async () => {
                     const doc = await reqRef.get();
                     if(doc.exists) {
                         const itemsToProcess = doc.data().items.map(item => ({ ...item, sentQuantity: item.quantity, nt_checked: false }));
                         updateData = { status: 'processing_partial_items', items: itemsToProcess };
                         expandedRequestsState.add(requestId);
                     }
-                    break;
-                case 'save_admin_note':
+                },
+                save_admin_note: () => {
                     updateData.adminNotes = document.getElementById(`adminNotes-${requestId}`).value;
                     alert('Nota guardada');
-                    break;
-                case 'finalize_processing':
+                },
+                finalize_processing: () => {
                     if (confirm("¿Finalizar revisión?")) updateData = { status: 'pending_nt_start' };
-                    break;
-                case 'start_nt_preparation':
+                },
+                start_nt_preparation: () => {
                     updateData = { status: 'pending_nt_active' };
                     expandedRequestsState.add(requestId);
-                    break;
-                case 'return_to_pending':
+                },
+                return_to_pending: async () => {
                     if (confirm("¿Devolver a revisión? Se borrarán los datos de los pasos posteriores.")) {
                         const docToReset = await reqRef.get();
                         if (docToReset.exists) {
                             const resetItems = docToReset.data().items.map(({ productId, productName, quantity }) => ({ productId, productName, quantity }));
-                            updateData = { 
-                                status: 'pending', 
-                                items: resetItems, 
-                                adminNotes: firebase.firestore.FieldValue.delete(), 
-                                ntNumber: firebase.firestore.FieldValue.delete(), 
-                                shippingNotes: firebase.firestore.FieldValue.delete(), 
-                                shippingInfo: firebase.firestore.FieldValue.delete(), 
-                                reception: firebase.firestore.FieldValue.delete(), 
-                                novelty: firebase.firestore.FieldValue.delete() 
-                            };
+                            updateData = { status: 'pending', items: resetItems, adminNotes: firebase.firestore.FieldValue.delete(), ntNumber: firebase.firestore.FieldValue.delete(), shippingNotes: firebase.firestore.FieldValue.delete(), shippingInfo: firebase.firestore.FieldValue.delete(), reception: firebase.firestore.FieldValue.delete(), novelty: firebase.firestore.FieldValue.delete() };
                             expandedRequestsState.delete(requestId);
                         }
                     }
-                    break;
-                case 'ready_to_ship':
+                },
+                ready_to_ship: () => {
                     if (confirm("¿Marcar como listo para enviar?")) updateData = { status: 'ready_to_ship' };
-                    break;
-                case 'save_shipping_note':
+                },
+                save_shipping_note: () => {
                     updateData.shippingNotes = document.getElementById(`shippingNotes-${requestId}`).value;
                     alert('Nota de envío guardada');
-                    break;
-                case 'proceed_to_shipping':
+                },
+                proceed_to_shipping: () => {
                     updateData = { status: 'shipping_details' };
-                    break;
-                case 'finalize_shipment':
+                },
+                finalize_shipment: () => {
                     const hasTracking = document.querySelector(`input[name="hasTracking-${requestId}"]:checked`).value === 'yes';
                     const trackingNumber = hasTracking ? document.getElementById(`trackingNumber-${requestId}`).value : null;
-                    if (hasTracking && !trackingNumber) return alert("Por favor, ingresa el número de guía.");
+                    if (hasTracking && !trackingNumber) {
+                        alert("Por favor, ingresa el número de guía.");
+                        return 'stop';
+                    }
                     updateData = { status: 'shipped', shippingInfo: { hasTracking, trackingNumber } };
-                    break;
-                case 'start_novelty_review':
+                },
+                start_novelty_review: () => {
                     updateData = { status: 'novelty_review' };
                     expandedRequestsState.add(requestId);
-                    break;
-                case 'finalize_novelty':
+                },
+                finalize_novelty: () => {
                     const reasonSelect = document.getElementById(`noveltyReason-${requestId}`);
                     let reason = reasonSelect.value === 'Otro' ? document.getElementById(`noveltyOtherReason-${requestId}`).value.trim() : reasonSelect.value;
                     const solution = document.getElementById(`noveltySolution-${requestId}`).value.trim();
                     updateData = { status: 'completed', novelty: { reason, solution, resolvedBy: currentUserData.user.email, timestamp: firebase.firestore.FieldValue.serverTimestamp() } };
                     expandedRequestsState.delete(requestId);
-                    break;
-                case 'finalize_reception':
-                    handleFinalizeReception(event); return;
-                case 'delete_my_request':
-                    handleDeleteMyRequest(event); return;
-                case 'edit_my_request':
-                    handleStartEdit(event); return;
-                case 'cancel':
+                },
+                finalize_reception: () => { handleFinalizeReception(event); return 'stop'; },
+                delete_my_request: () => { handleDeleteMyRequest(event); return 'stop'; },
+                edit_my_request: () => { handleStartEdit(event); return 'stop'; },
+                cancel: () => {
                     if (confirm("¿Cancelar solicitud?")) updateData = { status: 'cancelled' };
-                    break;
-            }
+                }
+            };
+            
+            const result = await actions[action]?.();
+            if (result === 'stop') return;
 
-            if (Object.keys(updateData).length > 0) await reqRef.update(updateData);
+            if (Object.keys(updateData).length > 0) {
+                await reqRef.update(updateData);
+            }
         }
         
         function handleToggleDetails(evento) {
@@ -819,6 +814,22 @@
             XLSX.utils.book_append_sheet(workbook, worksheet, "Historial");
             worksheet['!cols'] = [ { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 30 }, { wch: 50 } ];
             XLSX.writeFile(workbook, "Historial_Traslados_Parabarberos.xlsx");
+        }
+        
+        function renderProducts(productsToRender) {
+            dom.productList.innerHTML = '';
+            if (!productsToRender || productsToRender.length === 0) {
+                dom.productList.innerHTML = '<p class="text-gray-500 col-span-full text-center">No se encontraron productos.</p>';
+                return;
+            }
+            productsToRender.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'border p-3 rounded-lg shadow-sm hover:shadow-md transition bg-white';
+                const safeId = product.id.replace(/[^a-zA-Z0-9-_]/g, '');
+                card.innerHTML = `<h3 class="text-sm font-semibold text-gray-900" title="${product.description}">${product.name.length > 50 ? product.name.substring(0, 47) + '...' : product.name}</h3><p class="text-xs text-gray-400 mb-2">ID: ${product.id}</p><div class="flex items-center space-x-2 mt-auto"><input type="number" min="1" value="1" id="qty-${safeId}" class="w-16 border-gray-300 rounded-md text-center p-1"><button data-product-id="${product.id}" class="add-to-transfer-btn w-full bg-gray-800 hover:bg-black text-white text-xs font-bold py-2 px-2 rounded-md transition">Añadir</button></div>`;
+                dom.productList.appendChild(card);
+            });
+            dom.productList.querySelectorAll('.add-to-transfer-btn').forEach(b => b.onclick = handleAddToTransfer);
         }
 
         async function initializeApp() {
