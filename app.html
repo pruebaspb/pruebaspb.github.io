@@ -852,7 +852,7 @@ async function handleFinalizeShipment(event) {
             const submitButton = dom.transferForm.querySelector('button[type="submit"]');
             submitButton.textContent = 'ENVIAR SOLICITUD DE TRASLADO';
             submitButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-            submitButton.classList.add('bg-red-600', 'hover:bg-red-700');
+            submitButton.classList.add('bg-gray-500', 'hover:bg-gray-600'); 
             if (currentUserData && currentUserData.role === 'requester') {
                 dom.requesterName.innerHTML = `<option value="${currentUserData.name}">${currentUserData.name}</option>`;
                 dom.requesterName.value = currentUserData.name;
