@@ -99,6 +99,10 @@
                     <div id="adminPendingRequests" class="grid gap-4 mb-6"></div>
                     <h3 class="text-lg font-medium text-orange-500 mb-2">Pendientes por Nota de Traslado</h3>
                     <div id="adminPendingNtRequests" class="grid gap-4 mb-6"></div>
+                    <h3 class="text-lg font-medium text-blue-500 mb-2">Por Enviar</h3>
+                    <div id="adminReadyToShipRequests" class="grid gap-4 mb-6"></div>
+                    <h3 class="text-lg font-medium text-cyan-500 mb-2">Detalles de Envío</h3>
+                    <div id="adminShippingDetailsRequests" class="grid gap-4 mb-6"></div>
                     <h3 class="text-lg font-medium text-yellow-500 mb-2">Pendientes por Recibir</h3>
                     <div id="adminShippedRequests" class="grid gap-4"></div>
                 </div>
@@ -164,6 +168,7 @@
             myShippedRequests: document.getElementById('myShippedRequests'), myPendingRequests: document.getElementById('myPendingRequests'), 
             myHistoryRequests: document.getElementById('myHistoryRequests'), 
             adminPendingRequests: document.getElementById('adminPendingRequests'), adminPendingNtRequests: document.getElementById('adminPendingNtRequests'),
+            adminReadyToShipRequests: document.getElementById('adminReadyToShipRequests'),adminShippingDetailsRequests: document.getElementById('adminShippingDetailsRequests'),
             adminShippedRequests: document.getElementById('adminShippedRequests'), adminCompletedRequests: document.getElementById('adminCompletedRequests'), 
             adminCancelledRequests: document.getElementById('adminCancelledRequests'), requesterSearchId: document.getElementById('requesterSearchId'), 
             requesterDateFrom: document.getElementById('requesterDateFrom'), requesterDateTo: document.getElementById('requesterDateTo'),
@@ -182,6 +187,8 @@
             'processing_partial_items': 'border-l-4 border-red-400 bg-red-50', 
             'pending_nt_start': 'border-l-4 border-orange-400 bg-orange-50',
             'pending_nt_active': 'border-l-4 border-orange-400 bg-orange-50',
+            'ready_to_ship': 'border-l-4 border-blue-400 bg-blue-50',
+            'shipping_details': 'border-l-4 border-cyan-400 bg-cyan-50',
             'shipped': 'border-l-4 border-yellow-400 bg-yellow-50',
             'completed': 'border-l-4 border-green-500 bg-green-50',
             'completed_incomplete': 'border-l-4 border-green-500 bg-green-50',
@@ -189,11 +196,13 @@
         }[s] || 'border-l-4 border-gray-300');
 
         const translateStatus = (s) => ({
-            'pending':'Pendiente (Click para Iniciar Revisión)', 
+            'pending':'Pendiente', 
             'processing_partial_items':'En Revisión',
-            'pending_nt_start': 'Pendiente por NT (Click para Iniciar)',
+            'pending_nt_start': 'Pendiente por NT',
             'pending_nt_active': 'Preparando NT',
-            'shipped': 'Enviado (Por Recibir)',
+            'ready_to_ship': 'Por Enviar',
+            'shipping_details': 'Pendiente de Guía y Envío',
+            'shipped': 'Enviado Por Recibir',
             'completed':'Recibido Completo', 
             'completed_incomplete':'Recibido Incompleto',
             'cancelled':'Cancelado'
@@ -265,10 +274,14 @@
             } else {
                 const pendingForReview = applyFilters(sortedRequests.filter(r => r.status === 'pending' || r.status === 'processing_partial_items'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
                 const pendingForNt = applyFilters(sortedRequests.filter(r => r.status.startsWith('pending_nt')), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
+                const readyToShip = applyFilters(sortedRequests.filter(r => r.status === 'ready_to_ship'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
+                const shippingDetails = applyFilters(sortedRequests.filter(r => r.status === 'shipping_details'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
                 const pendingForReception = applyFilters(sortedRequests.filter(r => r.status === 'shipped'), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
                 
                 renderSection('adminPendingRequests', dom.adminPendingRequests, pendingForReview, 'admin', "No hay solicitudes pendientes de revisión.");
                 renderSection('adminPendingNtRequests', dom.adminPendingNtRequests, pendingForNt, 'admin', "No hay solicitudes pendientes de NT.");
+                renderSection('adminReadyToShipRequests', dom.adminReadyToShipRequests, readyToShip, 'admin', "No hay solicitudes listas para enviar.");
+                renderSection('adminShippingDetailsRequests', dom.adminShippingDetailsRequests, shippingDetails, 'admin', "No hay envíos pendientes de detalles.");
                 renderSection('adminShippedRequests', dom.adminShippedRequests, pendingForReception, 'admin', "No hay solicitudes pendientes de recibir.");
                 
                 const completedReqs = applyFilters(sortedRequests.filter(r => r.status.startsWith('completed')), dom.adminHistorySearchId, dom.adminHistoryDateFrom, dom.adminHistoryDateTo);
@@ -302,111 +315,141 @@
                 div.appendChild(button);
             }
         }
+    function createRequestCard(req, role) {
+    const isExpanded = expandedRequestsState.has(req.id);
+    const card = document.createElement('div');
+    card.className = `p-4 rounded-lg shadow-sm flex flex-col ${getRequestStatusColor(req.status)}`;
 
-        // --- FUNCIÓN 'createRequestCard' CORREGIDA FINAL ---
-        function createRequestCard(req, role) {
-            const isExpanded = expandedRequestsState.has(req.id);
-            const card = document.createElement('div');
-            // *** CAMBIO 1: Añadimos 'flex flex-col' a la tarjeta principal ***
-            card.className = `p-4 rounded-lg shadow-sm flex flex-col ${getRequestStatusColor(req.status)}`;
-        
-            const isShipped = req.status === 'shipped';
-            const hasItems = req.items && req.items.length > 0;
-            const allNtItemsChecked = hasItems && req.status === 'pending_nt_active' && req.items.every(item => item.nt_checked);
-            
-            const itemsHtml = hasItems ? (req.items || []).map((item, index) => {
-                if (role === 'admin' && req.status === 'pending_nt_active') {
-                    const itemChecked = item.nt_checked === true;
-                    const itemBgColor = itemChecked ? 'bg-green-100' : 'bg-red-100';
-                    const itemBorderColor = itemChecked ? 'border-green-200' : 'border-red-200';
-                    return `<li class="p-2 rounded-md border ${itemBorderColor} ${itemBgColor} flex justify-between items-center text-sm transition-colors"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">Enviado: <b>${item.sentQuantity}</b></div></div><input type="checkbox" ${itemChecked ? 'checked' : ''} data-request-id="${req.id}" data-item-index="${index}" class="nt-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"></li>`;
-                }
-                
-                let quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
-                if (item.sentQuantity !== undefined) { quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`; }
-                if (item.receivedQuantity !== undefined) {
-                    const color = item.receivedQuantity < item.sentQuantity ? 'text-red-600' : 'text-green-700';
-                    quantityDisplay += ` | Recibido: <b class="${color}">${item.receivedQuantity}</b>`;
-                }
-                const receptionInput = (role === 'requester' && isShipped) ? `<div class="flex items-center"><label class="text-sm mr-2">Recibido:</label><input type="number" value="${item.sentQuantity}" data-request-id="${req.id}" data-item-index="${index}" class="reception-qty-input w-20 p-1 border rounded-md text-center"></div>` : ``;
-                const adminInput = (role === 'admin' && req.status === 'processing_partial_items') ? `<input type="number" value="${item.sentQuantity ?? item.quantity}" data-request-id="${req.id}" data-item-index="${index}" class="admin-qty-input w-20 p-1 border rounded-md text-center">` : ``;
-                
-                return `<li class="p-2 rounded-md bg-white flex justify-between items-center text-sm"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">${quantityDisplay}</div></div>${receptionInput}${adminInput}</li>`;
-            }).join('') : '<p class="text-sm text-gray-500 italic">No hay artículos en esta solicitud.</p>';
-        
-            let adminActionsHtml = '';
-            if (role === 'admin') {
-                let buttons = '';
-                if (req.status === 'pending') {
-                    buttons += `<button data-request-id="${req.id}" data-action="start_processing" class="action-btn bg-gray-800 hover:bg-black text-white text-xs font-semibold py-2 px-3 rounded-md">Iniciar revisión</button>`;
-                }
-                if (req.status.startsWith('processing')) {
-                    buttons += `<button data-request-id="${req.id}" data-action="finalize_processing" class="action-btn bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Finalizar Revisión</button>`;
-                }
-                if (req.status === 'pending_nt_start') {
-                    buttons += `<button data-request-id="${req.id}" data-action="start_nt_preparation" class="action-btn bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2 px-3 rounded-md">Iniciar Preparación NT</button>`;
-                }
-                if (req.status === 'pending_nt_active') {
-                    buttons += `<button data-request-id="${req.id}" data-action="return_to_pending" class="action-btn bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Devolver a Revisión</button>`;
-                    buttons += `<button data-request-id="${req.id}" data-action="shipped" class="action-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" ${!allNtItemsChecked ? 'disabled' : ''}>Marcar como enviado</button>`;
-                }
-                if (['pending', 'processing_partial_items', 'pending_nt_start', 'pending_nt_active'].includes(req.status)) {
-                    buttons += `<button data-request-id="${req.id}" data-action="cancel" class="action-btn bg-red-700 hover:bg-red-800 text-white text-xs font-semibold py-2 px-3 rounded-md">Cancelar</button>`;
-                }
-                if (buttons) {
-                    adminActionsHtml = `<div class="mt-4 border-t pt-4 flex justify-end items-center flex-wrap gap-2">${buttons}</div>`;
-                }
-            }
-            
-            let requesterActionsHtml = '';
-            if (role === 'requester' && req.status === 'pending') {
-                requesterActionsHtml = `<div class="flex flex-col space-y-2"><button data-request-id="${req.id}" class="edit-my-request-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-1 px-2 rounded-md">Editar</button><button data-request-id="${req.id}" class="delete-my-request-btn bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-1 px-2 rounded-md">Eliminar</button></div>`;
-            }
-        
-            let receptionFormHtml = '';
-            if (role === 'requester' && isShipped) {
-                receptionFormHtml = `<div class="mt-4 border-t-2 border-blue-200 pt-4 space-y-3"><h5 class="font-bold text-md text-blue-700">Confirmar recepción</h5><div><label class="block text-sm font-medium text-gray-700">Observaciones de recepción:</label><textarea id="receptionNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2" placeholder="Ej: La caja llegó dañada..."></textarea></div><button data-request-id="${req.id}" class="finalize-reception-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Finalizar y confirmar Recepción</button></div>`;
-            }
-            
-            const reqDate = req.deliveryDate ? new Date(req.deliveryDate + 'T00:00:00').toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No especificada';
-            const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleDateString('es-CO') : '';
-            const hasDetailsToShow = hasItems || req.requesterNotes || req.adminNotes || adminActionsHtml || receptionFormHtml;
-        
-            // *** CAMBIO 2: Añadimos 'flex-grow' al div de detalles para que se estire ***
-            card.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-semibold text-lg text-gray-800">${req.requesterName}</h4>
-                        <p class="text-sm text-gray-600">Para: <strong>${req.toWarehouse}</strong></p>
-                        <p class="text-xs text-gray-400">ID: ${req.id} | Creada: ${creationDate}</p>
-                        <p class="text-sm mt-1">Fecha Requerida: <b>${reqDate}</b></p>
-                        <span class="inline-block mt-2 px-2 py-1 text-xs font-bold rounded-full ${getRequestStatusColor(req.status)} text-black">${translateStatus(req.status)}</span>
-                    </div>
-                    ${requesterActionsHtml}
-                </div>
-                <div id="details-${req.id}" class="flex-grow ${isExpanded ? '' : 'hidden'} mt-4 pt-4 border-t border-gray-200">
-                    ${req.requesterNotes ? `<div class="mb-3 p-3 bg-gray-50 rounded-lg border"><p class="text-sm font-semibold text-gray-600">Observaciones:</p><p class="text-sm text-gray-800 italic">"${req.requesterNotes}"</p></div>` : ''}
-                    ${req.adminNotes ? `<div class="mb-3 p-3 bg-red-50 rounded-lg border border-red-200"><p class="text-sm font-semibold text-red-800">Nota del Admin:</p><p class="text-sm text-red-900 italic">"${req.adminNotes}"</p></div>` : ''}
-                    ${(role === 'admin' && req.status.startsWith('processing')) ? `<div class="mt-4"><label for="adminNotes-${req.id}" class="text-sm font-medium text-gray-700">Añadir/Editar Nota:</label><textarea id="adminNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.adminNotes || ''}</textarea><button data-request-id="${req.id}" class="save-admin-note-btn mt-1 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-black">Guardar Nota</button></div>` : ''}
-                    <h5 class="font-bold text-gray-700 mt-3 mb-2">Items:</h5>
-                    <ul class="space-y-2">${itemsHtml}</ul>
-                    ${adminActionsHtml}
-                    ${receptionFormHtml}
-                </div>
-                ${hasDetailsToShow ? `<div class="text-center mt-2"><button data-request-id="${req.id}" class="toggle-details-btn text-sm font-semibold text-blue-600 hover:text-blue-800 py-1 px-3 rounded-full hover:bg-blue-50 transition-colors">${isExpanded ? 'Ver menos' : 'Ver más'}</button></div>` : ''}
-            `;
-        
-            card.querySelectorAll('.action-btn').forEach(b => b.onclick = handleAdminAction);
-            card.querySelectorAll('.finalize-reception-btn').forEach(b => b.onclick = handleFinalizeReception);
-            card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
-            card.querySelectorAll('.delete-my-request-btn').forEach(b => b.onclick = handleDeleteMyRequest);
-            card.querySelectorAll('.save-admin-note-btn').forEach(b => b.onclick = handleSaveAdminNote);
-            card.querySelectorAll('.edit-my-request-btn').forEach(b => b.onclick = handleStartEdit);
-            card.querySelectorAll('.toggle-details-btn').forEach(b => b.onclick = handleToggleDetails);
-            card.querySelectorAll('.nt-checkbox').forEach(c => c.onchange = handleNtCheckboxChange);
-        
-            return card;
+    const isShipped = req.status === 'shipped';
+    const hasItems = req.items && req.items.length > 0;
+    const allNtItemsChecked = hasItems && req.status === 'pending_nt_active' && req.items.every(item => item.nt_checked);
+    
+    const itemsHtml = hasItems ? (req.items || []).map((item, index) => {
+        if (role === 'admin' && req.status === 'pending_nt_active') {
+            const itemChecked = item.nt_checked === true;
+            const itemBgColor = itemChecked ? 'bg-green-100' : 'bg-red-100';
+            const itemBorderColor = itemChecked ? 'border-green-200' : 'border-red-200';
+            return `<li class="p-2 rounded-md border ${itemBorderColor} ${itemBgColor} flex justify-between items-center text-sm transition-colors"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">Enviado: <b>${item.sentQuantity}</b></div></div><input type="checkbox" ${itemChecked ? 'checked' : ''} data-request-id="${req.id}" data-item-index="${index}" class="nt-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"></li>`;
         }
+        
+        let quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
+        if (item.sentQuantity !== undefined) { quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`; }
+        if (item.receivedQuantity !== undefined) {
+            const color = item.receivedQuantity < item.sentQuantity ? 'text-red-600' : 'text-green-700';
+            quantityDisplay += ` | Recibido: <b class="${color}">${item.receivedQuantity}</b>`;
+        }
+        const receptionInput = (role === 'requester' && isShipped) ? `<div class="flex items-center"><label class="text-sm mr-2">Recibido:</label><input type="number" value="${item.sentQuantity}" data-request-id="${req.id}" data-item-index="${index}" class="reception-qty-input w-20 p-1 border rounded-md text-center"></div>` : ``;
+        const adminInput = (role === 'admin' && req.status === 'processing_partial_items') ? `<input type="number" value="${item.sentQuantity ?? item.quantity}" data-request-id="${req.id}" data-item-index="${index}" class="admin-qty-input w-20 p-1 border rounded-md text-center">` : ``;
+        
+        return `<li class="p-2 rounded-md bg-white flex justify-between items-center text-sm"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">${quantityDisplay}</div></div>${receptionInput}${adminInput}</li>`;
+    }).join('') : '<p class="text-sm text-gray-500 italic">No hay artículos en esta solicitud.</p>';
+
+    let adminActionsHtml = '';
+    if (role === 'admin') {
+        let buttons = '';
+        if (req.status === 'pending') {
+            buttons += `<button data-request-id="${req.id}" data-action="start_processing" class="action-btn bg-gray-800 hover:bg-black text-white text-xs font-semibold py-2 px-3 rounded-md">Iniciar revisión</button>`;
+        }
+        if (req.status.startsWith('processing')) {
+            buttons += `<button data-request-id="${req.id}" data-action="finalize_processing" class="action-btn bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Finalizar Revisión</button>`;
+        }
+        if (req.status === 'pending_nt_start') {
+            buttons += `<button data-request-id="${req.id}" data-action="start_nt_preparation" class="action-btn bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2 px-3 rounded-md">Iniciar Preparación NT</button>`;
+        }
+        if (req.status === 'pending_nt_active') {
+            buttons += `<button data-request-id="${req.id}" data-action="return_to_pending" class="action-btn bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Devolver a Revisión</button>`;
+            buttons += `<button data-request-id="${req.id}" data-action="ready_to_ship" class="action-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" ${!allNtItemsChecked ? 'disabled' : ''}>Marcar como Listo para Enviar</button>`;
+        }
+        
+        if (req.status === 'ready_to_ship') {
+            adminActionsHtml += `
+                <div class="mt-4 space-y-2">
+                    <label for="shippingNotes-${req.id}" class="text-sm font-medium text-gray-700">Observaciones de Envío (Opcional):</label>
+                    <textarea id="shippingNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.shippingNotes || ''}</textarea>
+                    <button data-request-id="${req.id}" class="save-shipping-note-btn mt-1 text-xs bg-gray-700 text-white px-3 py-1.5 rounded-md hover:bg-gray-800">Guardar Nota</button>
+                </div>
+            `;
+            buttons += `<button data-request-id="${req.id}" data-action="proceed_to_shipping" class="action-btn bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Proceder al Envío</button>`;
+        }
+        
+        if (req.status === 'shipping_details') {
+            adminActionsHtml += `
+                <div class="mt-4 space-y-3 p-3 bg-gray-50 rounded-lg border">
+                    <p class="font-semibold text-gray-800">¿Esta orden tiene número de guía?</p>
+                    <div class="flex items-center gap-x-4">
+                        <label><input type="radio" name="hasTracking-${req.id}" value="yes" class="tracking-option"> Sí</label>
+                        <label><input type="radio" name="hasTracking-${req.id}" value="no" class="tracking-option" checked> No</label>
+                    </div>
+                    <div id="trackingNumberDiv-${req.id}" class="hidden mt-2">
+                        <label for="trackingNumber-${req.id}" class="block text-sm font-medium text-gray-700">Número de Guía:</label>
+                        <input type="text" id="trackingNumber-${req.id}" class="w-full mt-1 border rounded-md p-2">
+                    </div>
+                </div>
+            `;
+            buttons += `<button data-request-id="${req.id}" class="finalize-shipment-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Guardar y Marcar como Enviado</button>`;
+        }
+
+        if (['pending', 'processing_partial_items', 'pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details'].includes(req.status)) {
+            buttons += `<button data-request-id="${req.id}" data-action="cancel" class="action-btn bg-red-700 hover:bg-red-800 text-white text-xs font-semibold py-2 px-3 rounded-md">Cancelar</button>`;
+        }
+
+        if (buttons) {
+            adminActionsHtml += `<div class="mt-4 border-t pt-4 flex justify-end items-center flex-wrap gap-2">${buttons}</div>`;
+        }
+    }
+    
+    let requesterActionsHtml = '';
+    if (role === 'requester' && req.status === 'pending') {
+        requesterActionsHtml = `<div class="flex flex-col space-y-2"><button data-request-id="${req.id}" class="edit-my-request-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-1 px-2 rounded-md">Editar</button><button data-request-id="${req.id}" class="delete-my-request-btn bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-1 px-2 rounded-md">Eliminar</button></div>`;
+    }
+
+    let receptionFormHtml = '';
+    if (role === 'requester' && isShipped) {
+        receptionFormHtml = `<div class="mt-4 border-t-2 border-blue-200 pt-4 space-y-3"><h5 class="font-bold text-md text-blue-700">Confirmar recepción</h5><div><label class="block text-sm font-medium text-gray-700">Observaciones de recepción:</label><textarea id="receptionNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2" placeholder="Ej: La caja llegó dañada..."></textarea></div><button data-request-id="${req.id}" class="finalize-reception-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Finalizar y confirmar Recepción</button></div>`;
+    }
+    
+    const reqDate = req.deliveryDate ? new Date(req.deliveryDate + 'T00:00:00').toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No especificada';
+    const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleDateString('es-CO') : '';
+    const hasDetailsToShow = hasItems || req.requesterNotes || req.adminNotes || adminActionsHtml || receptionFormHtml;
+
+    card.innerHTML = `
+        <div class="flex justify-between items-start">
+            <div>
+                <h4 class="font-semibold text-lg text-gray-800">${req.requesterName}</h4>
+                <p class="text-sm text-gray-600">Para: <strong>${req.toWarehouse}</strong></p>
+                <p class="text-xs text-gray-400">ID: ${req.id} | Creada: ${creationDate}</p>
+                <p class="text-sm mt-1">Fecha Requerida: <b>${reqDate}</b></p>
+                <span class="inline-block mt-2 px-2 py-1 text-xs font-bold rounded-full ${getRequestStatusColor(req.status)} text-black">${translateStatus(req.status)}</span>
+            </div>
+            ${requesterActionsHtml}
+        </div>
+        <div id="details-${req.id}" class="flex-grow ${isExpanded ? '' : 'hidden'} mt-4 pt-4 border-t border-gray-200">
+            ${req.requesterNotes ? `<div class="mb-3 p-3 bg-gray-50 rounded-lg border"><p class="text-sm font-semibold text-gray-600">Observaciones:</p><p class="text-sm text-gray-800 italic">"${req.requesterNotes}"</p></div>` : ''}
+            ${req.adminNotes ? `<div class="mb-3 p-3 bg-red-50 rounded-lg border border-red-200"><p class="text-sm font-semibold text-red-800">Nota del Admin:</p><p class="text-sm text-red-900 italic">"${req.adminNotes}"</p></div>` : ''}
+            ${(role === 'admin' && req.status.startsWith('processing')) ? `<div class="mt-4"><label for="adminNotes-${req.id}" class="text-sm font-medium text-gray-700">Añadir/Editar Nota:</label><textarea id="adminNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.adminNotes || ''}</textarea><button data-request-id="${req.id}" class="save-admin-note-btn mt-1 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-black">Guardar Nota</button></div>` : ''}
+            <h5 class="font-bold text-gray-700 mt-3 mb-2">Items:</h5>
+            <ul class="space-y-2">${itemsHtml}</ul>
+            ${adminActionsHtml}
+            ${receptionFormHtml}
+        </div>
+        ${hasDetailsToShow ? `<div class="text-center mt-2"><button data-request-id="${req.id}" class="toggle-details-btn text-sm font-semibold text-blue-600 hover:text-blue-800 py-1 px-3 rounded-full hover:bg-blue-50 transition-colors">${isExpanded ? 'Ver menos' : 'Ver más'}</button></div>` : ''}
+    `;
+
+    card.querySelectorAll('.action-btn').forEach(b => b.onclick = handleAdminAction);
+    card.querySelectorAll('.finalize-reception-btn').forEach(b => b.onclick = handleFinalizeReception);
+    card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
+    card.querySelectorAll('.delete-my-request-btn').forEach(b => b.onclick = handleDeleteMyRequest);
+    card.querySelectorAll('.save-admin-note-btn').forEach(b => b.onclick = handleSaveAdminNote);
+    card.querySelectorAll('.edit-my-request-btn').forEach(b => b.onclick = handleStartEdit);
+    card.querySelectorAll('.toggle-details-btn').forEach(b => b.onclick = handleToggleDetails);
+    card.querySelectorAll('.nt-checkbox').forEach(c => c.onchange = handleNtCheckboxChange);
+    // Añadimos los nuevos listeners
+    card.querySelectorAll('.save-shipping-note-btn').forEach(b => b.onclick = handleSaveShippingNote);
+    card.querySelectorAll('.finalize-shipment-btn').forEach(b => b.onclick = handleFinalizeShipment);
+    card.querySelectorAll('.tracking-option').forEach(radio => radio.onchange = handleTrackingOptionChange);
+
+    return card;
+}
 
         function renderProducts(productsToRender) {
             dom.productList.innerHTML = '';
@@ -446,87 +489,156 @@
         // --- MANEJADORES DE EVENTOS Y ACCIONES ---
         
         async function handleAdminAction(evento) {
-            const { requestId, action } = evento.currentTarget.dataset;
-            const reqRef = transfersCollection.doc(requestId);
-            let updateData = {};
-        
-            try {
-                switch (action) {
-                    case 'start_processing':
-                        const doc = await reqRef.get();
-                        if (!doc.exists) return;
-                        const itemsToProcess = doc.data().items.map(item => ({ 
-                            ...item, 
-                            sentQuantity: item.quantity, 
-                            nt_checked: false 
-                        }));
-                        updateData = { 
-                            status: 'processing_partial_items', 
-                            items: itemsToProcess 
-                        };
-                        expandedRequestsState.add(requestId);
-                        break;
-                    
-                    case 'finalize_processing':
-                        if (!confirm("¿Estás seguro de que has finalizado la revisión de esta solicitud?")) return;
-                        updateData = { status: 'pending_nt_start' };
-                        expandedRequestsState.delete(requestId);
-                        break;
-        
-                    case 'start_nt_preparation':
-                        updateData = { status: 'pending_nt_active' };
-                        expandedRequestsState.add(requestId);
-                        break;
-        
-                    case 'return_to_pending':
-                        if (!confirm("¿Seguro que quieres devolver esta solicitud a revisión? Se borrarán todas las notas y cantidades modificadas.")) {
-                            return;
-                        }
-                        
-                        const docToReset = await reqRef.get();
-                        if (!docToReset.exists) return;
+    const { requestId, action } = evento.currentTarget.dataset;
+    const reqRef = transfersCollection.doc(requestId);
+    let updateData = {};
 
-                        const resetItems = docToReset.data().items.map(item => {
-                            const { productId, productName, quantity } = item; 
-                            return { productId, productName, quantity }; 
-                        });
-                        
-                        updateData = { 
-                            status: 'pending',
-                            adminNotes: firebase.firestore.FieldValue.delete(), 
-                            items: resetItems 
-                        };
-                        
-                        expandedRequestsState.delete(requestId);
-                        break;
-                    
-                    case 'shipped':
-                        if (!confirm("¿Marcar este traslado como ENVIADO?")) return;
-                        updateData = { status: 'shipped' };
-                        expandedRequestsState.delete(requestId);
-                        break;
-        
-                    case 'cancel':
-                        if (!confirm("¿Cancelar esta solicitud?")) return;
-                        updateData = { status: 'cancelled' };
-                        expandedRequestsState.delete(requestId);
-                        break;
-                    
-                    default:
-                        return;
+    try {
+        switch (action) {
+            case 'start_processing':
+                const doc = await reqRef.get();
+                if (!doc.exists) return;
+                const itemsToProcess = doc.data().items.map(item => ({ 
+                    ...item, 
+                    sentQuantity: item.quantity, 
+                    nt_checked: false 
+                }));
+                updateData = { 
+                    status: 'processing_partial_items', 
+                    items: itemsToProcess 
+                };
+                expandedRequestsState.add(requestId);
+                break;
+            
+            case 'finalize_processing':
+                if (!confirm("¿Estás seguro de que has finalizado la revisión de esta solicitud?")) return;
+                updateData = { status: 'pending_nt_start' };
+                expandedRequestsState.delete(requestId);
+                break;
+
+            case 'start_nt_preparation':
+                updateData = { status: 'pending_nt_active' };
+                expandedRequestsState.add(requestId);
+                break;
+
+            case 'return_to_pending':
+                if (!confirm("¿Seguro que quieres devolver esta solicitud a revisión? Se borrarán todas las notas y cantidades modificadas.")) {
+                    return;
                 }
-        
-                if (Object.keys(updateData).length > 0) {
-                    await reqRef.update(updateData);
-                } else {
-                    renderAllSections();
-                }
-        
-            } catch(e) {
-                console.error("Error al procesar la acción:", e);
-                alert("Ocurrió un error al procesar la acción.");
-            }
+                const docToReset = await reqRef.get();
+                if (!docToReset.exists) return;
+                const resetItems = docToReset.data().items.map(item => {
+                    const { productId, productName, quantity } = item; 
+                    return { productId, productName, quantity }; 
+                });
+                updateData = { 
+                    status: 'pending',
+                    adminNotes: firebase.firestore.FieldValue.delete(), 
+                    items: resetItems 
+                };
+                expandedRequestsState.delete(requestId);
+                break;
+            
+            // ACCIÓN MODIFICADA
+            case 'ready_to_ship':
+                if (!confirm("¿Marcar esta solicitud como LISTA PARA ENVIAR?")) return;
+                updateData = { status: 'ready_to_ship' };
+                expandedRequestsState.add(requestId);
+                break;
+            
+            // NUEVA ACCIÓN
+            case 'proceed_to_shipping':
+                updateData = { status: 'shipping_details' };
+                expandedRequestsState.add(requestId);
+                break;
+
+            case 'cancel':
+                if (!confirm("¿Cancelar esta solicitud?")) return;
+                updateData = { status: 'cancelled' };
+                expandedRequestsState.delete(requestId);
+                break;
+            
+            default:
+                return;
         }
+
+        if (Object.keys(updateData).length > 0) {
+            await reqRef.update(updateData);
+        } else {
+            renderAllSections();
+        }
+
+    } catch(e) {
+        console.error("Error al procesar la acción:", e);
+        alert("Ocurrió un error al procesar la acción.");
+    }
+}
+        // --- NUEVAS FUNCIONES MANEJADORAS ---
+
+async function handleSaveShippingNote(event) {
+    const button = event.currentTarget;
+    const requestId = button.dataset.requestId;
+    const shippingNotes = document.getElementById(`shippingNotes-${requestId}`).value;
+    const reqRef = transfersCollection.doc(requestId);
+    button.textContent = 'Guardando...';
+    try {
+        await reqRef.update({ shippingNotes: shippingNotes });
+        alert("Nota de envío guardada.");
+    } catch (e) {
+        console.error("Error al guardar nota de envío:", e);
+        alert("No se pudo guardar la nota.");
+    } finally {
+        button.textContent = 'Guardar Nota';
+    }
+}
+
+function handleTrackingOptionChange(event) {
+    const radio = event.currentTarget;
+    const requestId = radio.name.split('-')[1];
+    const trackingDiv = document.getElementById(`trackingNumberDiv-${requestId}`);
+    if (radio.value === 'yes') {
+        trackingDiv.classList.remove('hidden');
+    } else {
+        trackingDiv.classList.add('hidden');
+    }
+}
+
+async function handleFinalizeShipment(event) {
+    const button = event.currentTarget;
+    const requestId = button.dataset.requestId;
+    button.disabled = true;
+    button.textContent = 'Guardando...';
+
+    const hasTracking = document.querySelector(`input[name="hasTracking-${requestId}"]:checked`).value === 'yes';
+    const trackingNumber = hasTracking ? document.getElementById(`trackingNumber-${requestId}`).value : null;
+
+    if (hasTracking && !trackingNumber) {
+        alert("Por favor, ingresa el número de guía.");
+        button.disabled = false;
+        button.textContent = 'Guardar y Marcar como Enviado';
+        return;
+    }
+
+    const shippingInfo = {
+        hasTracking: hasTracking,
+        trackingNumber: trackingNumber || null
+    };
+
+    try {
+        const reqRef = transfersCollection.doc(requestId);
+        // Actualizamos el estado a 'shipped' y guardamos la info de envío
+        await reqRef.update({
+            status: 'shipped',
+            shippingInfo: shippingInfo
+        });
+        expandedRequestsState.delete(requestId);
+    } catch (e) {
+        console.error("Error al finalizar el envío:", e);
+        alert("Ocurrió un error al guardar los detalles del envío.");
+        button.disabled = false;
+        button.textContent = 'Guardar y Marcar como Enviado';
+    }
+}
         
         function handleToggleDetails(evento) {
             const button = evento.currentTarget;
