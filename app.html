@@ -180,32 +180,30 @@
             uploadStatus: document.getElementById('uploadStatus'), fileNameDisplay: document.getElementById('fileNameDisplay'),
             userEmailDisplay: document.getElementById('userEmailDisplay'), logoutBtn: document.getElementById('logoutBtn')
         };
-        
-        // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
-        // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
+// --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
 const getRequestStatusColor = (s) => {
-    // 1. Pendientes: Rojo
+    // 1. PENDIENTES DE REVISIÓN (ROJO)
     if (s === 'pending' || s === 'processing_partial_items') {
-        return 'border-l-4 border-red-500 bg-white';
+        return 'border-l-4 border-red-500 bg-red-50';
     }
-    // 2. En proceso: Amarillo
+    // 2. EN PROCESO (AMARILLO FUERTE)
     if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped'].includes(s)) {
-        return 'border-l-4 border-yellow-500 bg-white';
+        return 'border-l-4 border-yellow-500 bg-yellow-50';
     }
-    // 3. Completadas: Verde
+    // 3. RECIBIDO COMPLETO (VERDE)
     if (s === 'completed') {
-        return 'border-l-4 border-green-500 bg-white';
+        return 'border-l-4 border-green-500 bg-green-50';
     }
-    // 4. Incompleto (Precaución): Amarillo
+    // 4. RECIBIDO INCOMPLETO (AMARILLO FUERTE)
     if (s === 'completed_incomplete') {
-        return 'border-l-4 border-yellow-500 bg-white';
+        return 'border-l-4 border-yellow-500 bg-yellow-50';
     }
-    // 5. Canceladas: Rojo Oscuro
+    // 5. CANCELADAS (ROJO OSCURO)
     if (s === 'cancelled') {
-        return 'border-l-4 border-red-800 bg-white';
+        return 'border-l-4 border-red-800 bg-red-100';
     }
-    // Default
-    return 'border-l-4 border-gray-300 bg-white';
+    // Color por defecto (si algo falla)
+    return 'border-l-4 border-gray-300 bg-gray-50';
 };
 
         const translateStatus = (s) => ({
