@@ -48,7 +48,7 @@
                         </div>
                         <input type="hidden" id="fromWarehouse" value="Bodega Principal">
                         <div><label for="requesterNotes" class="block text-sm font-medium text-gray-700">Observaciones</label><textarea id="requesterNotes" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm" placeholder="Ej: Necesito este pedido con urgencia..."></textarea></div>
-                        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg">ENVIAR SOLICITUD DE TRASLADO</button>
+                        <button type="submit" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg">ENVIAR SOLICITUD DE TRASLADO</button>
                     </form>
                 </div>
             </div>
@@ -95,15 +95,15 @@
                     <div class="grid grid-cols-2 gap-2"><input type="date" id="adminActiveDateFrom" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Desde"><input type="date" id="adminActiveDateTo" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Hasta"></div>
                 </div>
                 <div class="max-h-[80vh] overflow-y-auto">
-                    <h3 class="text-lg font-medium text-red-500 mb-2">Pendientes de Revisión</h3>
+                   <h3 class="text-lg font-bold text-black mb-2">Pendientes de Revisión</h3>
                     <div id="adminPendingRequests" class="grid gap-4 mb-6"></div>
-                    <h3 class="text-lg font-medium text-orange-500 mb-2">Pendientes por Nota de Traslado</h3>
+                    <h3 class="text-lg font-bold text-black mb-2">Pendientes por Nota de Traslado</h3>
                     <div id="adminPendingNtRequests" class="grid gap-4 mb-6"></div>
-                    <h3 class="text-lg font-medium text-blue-500 mb-2">Por Enviar</h3>
+                    <h3 class="text-lg font-bold text-black mb-2">Por Enviar</h3>
                     <div id="adminReadyToShipRequests" class="grid gap-4 mb-6"></div>
-                    <h3 class="text-lg font-medium text-cyan-500 mb-2">Detalles de Envío</h3>
+                    <h3 class="text-lg font-bold text-black mb-2">Detalles de Envío</h3>
                     <div id="adminShippingDetailsRequests" class="grid gap-4 mb-6"></div>
-                    <h3 class="text-lg font-medium text-yellow-500 mb-2">Pendientes por Recibir</h3>
+                    <h3 class="text-lg font-bold text-black mb-2">Pendientes por Recibir</h3>
                     <div id="adminShippedRequests" class="grid gap-4"></div>
                 </div>
             </div>
@@ -118,9 +118,9 @@
                     <div class="grid grid-cols-2 gap-2"><input type="date" id="adminHistoryDateFrom" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Desde"><input type="date" id="adminHistoryDateTo" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Hasta"></div>
                 </div>
                 <div class="max-h-[80vh] overflow-y-auto">
-                    <h3 class="text-lg font-medium text-green-600 mb-2">Completadas</h3>
+                    <h3 class="text-lg font-bold text-black mb-2">Completadas</h3>
                     <div id="adminCompletedRequests" class="grid gap-4 mb-6"></div>
-                    <h3 class="text-lg font-medium text-red-700 mb-2">Canceladas</h3>
+                    <h3 class="text-lg font-bold text-black mb-2">Canceladas</h3>
                     <div id="adminCancelledRequests" class="grid gap-4"></div>
                 </div>
             </div>
@@ -182,18 +182,31 @@
         };
         
         // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
-        const getRequestStatusColor = (s) => ({
-            'pending': 'border-l-4 border-red-400 bg-red-50',
-            'processing_partial_items': 'border-l-4 border-red-400 bg-red-50', 
-            'pending_nt_start': 'border-l-4 border-orange-400 bg-orange-50',
-            'pending_nt_active': 'border-l-4 border-orange-400 bg-orange-50',
-            'ready_to_ship': 'border-l-4 border-blue-400 bg-blue-50',
-            'shipping_details': 'border-l-4 border-cyan-400 bg-cyan-50',
-            'shipped': 'border-l-4 border-yellow-400 bg-yellow-50',
-            'completed': 'border-l-4 border-green-500 bg-green-50',
-            'completed_incomplete': 'border-l-4 border-green-500 bg-green-50',
-            'cancelled': 'border-l-4 border-red-700 bg-red-100'
-        }[s] || 'border-l-4 border-gray-300');
+        // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
+const getRequestStatusColor = (s) => {
+    // 1. Pendientes: Rojo
+    if (s === 'pending' || s === 'processing_partial_items') {
+        return 'border-l-4 border-red-500 bg-white';
+    }
+    // 2. En proceso: Amarillo
+    if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped'].includes(s)) {
+        return 'border-l-4 border-yellow-500 bg-white';
+    }
+    // 3. Completadas: Verde
+    if (s === 'completed') {
+        return 'border-l-4 border-green-500 bg-white';
+    }
+    // 4. Incompleto (Precaución): Amarillo
+    if (s === 'completed_incomplete') {
+        return 'border-l-4 border-yellow-500 bg-white';
+    }
+    // 5. Canceladas: Rojo Oscuro
+    if (s === 'cancelled') {
+        return 'border-l-4 border-red-800 bg-white';
+    }
+    // Default
+    return 'border-l-4 border-gray-300 bg-white';
+};
 
         const translateStatus = (s) => ({
             'pending':'Pendiente', 
@@ -315,16 +328,16 @@
                 div.appendChild(button);
             }
         }
-        // --- FUNCIÓN 'createRequestCard' COMPLETA Y DEFINITIVA ---
+        // --- FUNCIÓN 'createRequestCard' COMPLETA Y CON NUEVOS ESTILOS ---
 function createRequestCard(req, role) {
     const isExpanded = expandedRequestsState.has(req.id);
     const card = document.createElement('div');
+    // La clase del fondo ahora siempre es bg-white, controlada desde getRequestStatusColor
     card.className = `p-4 rounded-lg shadow-sm flex flex-col ${getRequestStatusColor(req.status)}`;
 
     const isShipped = req.status === 'shipped';
     const hasItems = req.items && req.items.length > 0;
     
-    // Lógica de validación para el botón de NT
     const allNtItemsChecked = hasItems && req.status === 'pending_nt_active' && req.items.every(item => item.nt_checked);
     const hasNtNumber = req.status === 'pending_nt_active' && req.ntNumber && req.ntNumber.trim() !== '';
     const canProceedFromNt = allNtItemsChecked && hasNtNumber;
@@ -362,48 +375,21 @@ function createRequestCard(req, role) {
             buttons += `<button data-request-id="${req.id}" data-action="start_nt_preparation" class="action-btn bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold py-2 px-3 rounded-md">Iniciar Preparación NT</button>`;
         }
         if (req.status === 'pending_nt_active') {
-            adminActionsHtml += `
-                <div class="mt-4 space-y-2">
-                    <label for="ntNumber-${req.id}" class="text-sm font-medium text-gray-700">Número de Nota de Traslado (Obligatorio):</label>
-                    <input type="text" id="ntNumber-${req.id}" data-request-id="${req.id}" value="${req.ntNumber || ''}" class="nt-number-input w-full mt-1 border rounded-md p-2" placeholder="Ingresa el número de NT...">
-                </div>
-            `;
+            adminActionsHtml += `<div class="mt-4 space-y-2"><label for="ntNumber-${req.id}" class="text-sm font-medium text-gray-700">Número de Nota de Traslado (Obligatorio):</label><input type="text" id="ntNumber-${req.id}" data-request-id="${req.id}" value="${req.ntNumber || ''}" class="nt-number-input w-full mt-1 border rounded-md p-2" placeholder="Ingresa el número de NT..."></div>`;
             buttons += `<button data-request-id="${req.id}" data-action="return_to_pending" class="action-btn bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Devolver a Revisión</button>`;
             buttons += `<button data-request-id="${req.id}" data-action="ready_to_ship" class="action-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" ${!canProceedFromNt ? 'disabled' : ''}>Marcar como Listo para Enviar</button>`;
         }
-        
         if (req.status === 'ready_to_ship') {
-            adminActionsHtml += `
-                <div class="mt-4 space-y-2">
-                    <label for="shippingNotes-${req.id}" class="text-sm font-medium text-gray-700">Observaciones de Envío (Opcional):</label>
-                    <textarea id="shippingNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2" placeholder="Ej: Se envía en 2 cajas...">${req.shippingNotes || ''}</textarea>
-                    <button data-request-id="${req.id}" class="save-shipping-note-btn mt-1 text-xs bg-gray-700 text-white px-3 py-1.5 rounded-md hover:bg-gray-800">Guardar Nota</button>
-                </div>
-            `;
+            adminActionsHtml += `<div class="mt-4 space-y-2"><label for="shippingNotes-${req.id}" class="text-sm font-medium text-gray-700">Observaciones de Envío (Opcional):</label><textarea id="shippingNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2" placeholder="Ej: Se envía en 2 cajas...">${req.shippingNotes || ''}</textarea><button data-request-id="${req.id}" class="save-shipping-note-btn mt-1 text-xs bg-gray-700 text-white px-3 py-1.5 rounded-md hover:bg-gray-800">Guardar Nota</button></div>`;
             buttons += `<button data-request-id="${req.id}" data-action="proceed_to_shipping" class="action-btn bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Proceder al Envío</button>`;
         }
-        
         if (req.status === 'shipping_details') {
-            adminActionsHtml += `
-                <div class="mt-4 space-y-3 p-3 bg-gray-50 rounded-lg border">
-                    <p class="font-semibold text-gray-800">¿Esta orden tiene número de guía?</p>
-                    <div class="flex items-center gap-x-4">
-                        <label><input type="radio" name="hasTracking-${req.id}" value="yes" class="tracking-option"> Sí</label>
-                        <label><input type="radio" name="hasTracking-${req.id}" value="no" class="tracking-option" checked> No</label>
-                    </div>
-                    <div id="trackingNumberDiv-${req.id}" class="hidden mt-2">
-                        <label for="trackingNumber-${req.id}" class="block text-sm font-medium text-gray-700">Número de Guía:</label>
-                        <input type="text" id="trackingNumber-${req.id}" class="w-full mt-1 border rounded-md p-2">
-                    </div>
-                </div>
-            `;
+            adminActionsHtml += `<div class="mt-4 space-y-3 p-3 bg-gray-50 rounded-lg border"><p class="font-semibold text-gray-800">¿Esta orden tiene número de guía?</p><div class="flex items-center gap-x-4"><label><input type="radio" name="hasTracking-${req.id}" value="yes" class="tracking-option"> Sí</label><label><input type="radio" name="hasTracking-${req.id}" value="no" class="tracking-option" checked> No</label></div><div id="trackingNumberDiv-${req.id}" class="hidden mt-2"><label for="trackingNumber-${req.id}" class="block text-sm font-medium text-gray-700">Número de Guía:</label><input type="text" id="trackingNumber-${req.id}" class="w-full mt-1 border rounded-md p-2"></div></div>`;
             buttons += `<button data-request-id="${req.id}" class="finalize-shipment-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Guardar y Marcar como Enviado</button>`;
         }
-
         if (['pending', 'processing_partial_items', 'pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details'].includes(req.status)) {
             buttons += `<button data-request-id="${req.id}" data-action="cancel" class="action-btn bg-red-700 hover:bg-red-800 text-white text-xs font-semibold py-2 px-3 rounded-md">Cancelar</button>`;
         }
-
         if (buttons) {
             adminActionsHtml += `<div class="mt-4 border-t pt-4 flex justify-end items-center flex-wrap gap-2">${buttons}</div>`;
         }
@@ -423,6 +409,7 @@ function createRequestCard(req, role) {
     const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleDateString('es-CO') : '';
     const hasDetailsToShow = hasItems || req.requesterNotes || req.adminNotes || req.ntNumber || req.shippingNotes || req.shippingInfo || (req.reception && req.reception.notes) || adminActionsHtml || receptionFormHtml;
 
+    // --- HTML DE LAS NOTAS MODIFICADO PARA SER BLANCO CON BORDE GRIS ---
     card.innerHTML = `
         <div class="flex justify-between items-start">
             <div>
@@ -430,18 +417,20 @@ function createRequestCard(req, role) {
                 <p class="text-sm text-gray-600">Para: <strong>${req.toWarehouse}</strong></p>
                 <p class="text-xs text-gray-400">ID: ${req.id} | Creada: ${creationDate}</p>
                 <p class="text-sm mt-1">Fecha Requerida: <b>${reqDate}</b></p>
-                <span class="inline-block mt-2 px-2 py-1 text-xs font-bold rounded-full ${getRequestStatusColor(req.status)} text-black">${translateStatus(req.status)}</span>
+                <span class="inline-block mt-2 px-2 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-800">${translateStatus(req.status)}</span>
             </div>
             ${requesterActionsHtml}
         </div>
         <div id="details-${req.id}" class="flex-grow ${isExpanded ? '' : 'hidden'} mt-4 pt-4 border-t border-gray-200">
-            ${req.requesterNotes ? `<div class="mb-3 p-3 bg-gray-50 rounded-lg border"><p class="text-sm font-semibold text-gray-600">Obs. Solicitante:</p><p class="text-sm text-gray-800 italic">"${req.requesterNotes}"</p></div>` : ''}
-            ${req.adminNotes ? `<div class="mb-3 p-3 bg-red-50 rounded-lg border border-red-200"><p class="text-sm font-semibold text-red-800">Nota del Admin (Revisión):</p><p class="text-sm text-red-900 italic">"${req.adminNotes}"</p></div>` : ''}
-            ${req.ntNumber ? `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><p class="text-sm font-semibold text-orange-800">Nº Nota de Traslado:</p><p class="text-sm font-bold text-orange-900">${req.ntNumber}</p></div>` : ''}
-            ${req.shippingNotes ? `<div class="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200"><p class="text-sm font-semibold text-blue-800">Obs. de Envío:</p><p class="text-sm text-blue-900 italic">"${req.shippingNotes}"</p></div>` : ''}
-            ${req.shippingInfo ? `<div class="mb-3 p-3 bg-cyan-50 rounded-lg border border-cyan-200"><p class="text-sm font-semibold text-cyan-800">Guía de Envío:</p><p class="text-sm font-bold text-cyan-900">${req.shippingInfo.hasTracking ? req.shippingInfo.trackingNumber : 'Sin número de guía'}</p></div>` : ''}
-            ${(req.reception && req.reception.notes) ? `<div class="mb-3 p-3 bg-green-50 rounded-lg border border-green-200"><p class="text-sm font-semibold text-green-800">Obs. de Recepción:</p><p class="text-sm text-green-900 italic">"${req.reception.notes}"</p></div>` : ''}
-            
+            <div class="space-y-3">
+                ${req.requesterNotes ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Obs. Solicitante:</p><p class="text-sm text-gray-800 italic">"${req.requesterNotes}"</p></div>` : ''}
+                ${req.adminNotes ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Nota del Admin (Revisión):</p><p class="text-sm text-gray-800 italic">"${req.adminNotes}"</p></div>` : ''}
+                ${req.ntNumber ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Nº Nota de Traslado:</p><p class="text-sm font-bold text-gray-900">${req.ntNumber}</p></div>` : ''}
+                ${req.shippingNotes ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Obs. de Envío:</p><p class="text-sm text-gray-800 italic">"${req.shippingNotes}"</p></div>` : ''}
+                ${req.shippingInfo ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Guía de Envío:</p><p class="text-sm font-bold text-gray-900">${req.shippingInfo.hasTracking ? req.shippingInfo.trackingNumber : 'Sin número de guía'}</p></div>` : ''}
+                ${(req.reception && req.reception.notes) ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Obs. de Recepción:</p><p class="text-sm text-gray-800 italic">"${req.reception.notes}"</p></div>` : ''}
+            </div>
+
             ${(role === 'admin' && req.status.startsWith('processing')) ? `<div class="mt-4"><label for="adminNotes-${req.id}" class="text-sm font-medium text-gray-700">Añadir/Editar Nota de Revisión:</label><textarea id="adminNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.adminNotes || ''}</textarea><button data-request-id="${req.id}" class="save-admin-note-btn mt-1 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-black">Guardar Nota</button></div>` : ''}
             
             <h5 class="font-bold text-gray-700 mt-3 mb-2">Items:</h5>
@@ -452,7 +441,6 @@ function createRequestCard(req, role) {
         ${hasDetailsToShow ? `<div class="text-center mt-2"><button data-request-id="${req.id}" class="toggle-details-btn text-sm font-semibold text-blue-600 hover:text-blue-800 py-1 px-3 rounded-full hover:bg-blue-50 transition-colors">${isExpanded ? 'Ver menos' : 'Ver más'}</button></div>` : ''}
     `;
 
-    // Asignación de todos los listeners
     card.querySelectorAll('.action-btn').forEach(b => b.onclick = handleAdminAction);
     card.querySelectorAll('.finalize-reception-btn').forEach(b => b.onclick = handleFinalizeReception);
     card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
@@ -464,7 +452,6 @@ function createRequestCard(req, role) {
     card.querySelectorAll('.save-shipping-note-btn').forEach(b => b.onclick = handleSaveShippingNote);
     card.querySelectorAll('.finalize-shipment-btn').forEach(b => b.onclick = handleFinalizeShipment);
     card.querySelectorAll('.tracking-option').forEach(radio => radio.onchange = handleTrackingOptionChange);
-    // Listener corregido para el input de NT
     card.querySelectorAll('.nt-number-input').forEach(input => input.onchange = handleNtNumberInput);
 
     return card;
