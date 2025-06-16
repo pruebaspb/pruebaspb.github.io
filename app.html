@@ -326,11 +326,10 @@ const getRequestStatusColor = (s) => {
                 div.appendChild(button);
             }
         }
-        // --- FUNCIÓN 'createRequestCard' COMPLETA Y CON NUEVOS ESTILOS ---
+        // --- FUNCIÓN 'createRequestCard' COMPLETA Y ACTUALIZADA ---
 function createRequestCard(req, role) {
     const isExpanded = expandedRequestsState.has(req.id);
     const card = document.createElement('div');
-    // La clase del fondo ahora siempre es bg-white, controlada desde getRequestStatusColor
     card.className = `p-4 rounded-lg shadow-sm flex flex-col ${getRequestStatusColor(req.status)}`;
 
     const isShipped = req.status === 'shipped';
@@ -404,10 +403,12 @@ function createRequestCard(req, role) {
     }
     
     const reqDate = req.deliveryDate ? new Date(req.deliveryDate + 'T00:00:00').toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No especificada';
-    const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleDateString('es-CO') : '';
+    
+    // --- LÍNEA MODIFICADA AQUÍ ---
+    const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '';
+    
     const hasDetailsToShow = hasItems || req.requesterNotes || req.adminNotes || req.ntNumber || req.shippingNotes || req.shippingInfo || (req.reception && req.reception.notes) || adminActionsHtml || receptionFormHtml;
 
-    // --- HTML DE LAS NOTAS MODIFICADO PARA SER BLANCO CON BORDE GRIS ---
     card.innerHTML = `
         <div class="flex justify-between items-start">
             <div>
@@ -426,9 +427,8 @@ function createRequestCard(req, role) {
                 ${req.ntNumber ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Nº Nota de Traslado:</p><p class="text-sm font-bold text-gray-900">${req.ntNumber}</p></div>` : ''}
                 ${req.shippingNotes ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Obs. de Envío:</p><p class="text-sm text-gray-800 italic">"${req.shippingNotes}"</p></div>` : ''}
                 ${req.shippingInfo ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Guía de Envío:</p><p class="text-sm font-bold text-gray-900">${req.shippingInfo.hasTracking ? req.shippingInfo.trackingNumber : 'Sin número de guía'}</p></div>` : ''}
-                ${(req.reception && req.reception.notes) ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Obs. de Recepción:</p><p class="text-sm text-gray-800 italic">"${req.reception.notes}"</p></div>` : ''}
+                ${(req.reception && req.reception.notes) ? `<div class="p-3 bg-white rounded-lg border border-gray-200"><p class="text-sm font-semibold text-gray-700">Obs. de Recepción:</p><p class="text-sm text-green-900 italic">"${req.reception.notes}"</p></div>` : ''}
             </div>
-
             ${(role === 'admin' && req.status.startsWith('processing')) ? `<div class="mt-4"><label for="adminNotes-${req.id}" class="text-sm font-medium text-gray-700">Añadir/Editar Nota de Revisión:</label><textarea id="adminNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.adminNotes || ''}</textarea><button data-request-id="${req.id}" class="save-admin-note-btn mt-1 text-xs bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-black">Guardar Nota</button></div>` : ''}
             
             <h5 class="font-bold text-gray-700 mt-3 mb-2">Items:</h5>
@@ -439,6 +439,7 @@ function createRequestCard(req, role) {
         ${hasDetailsToShow ? `<div class="text-center mt-2"><button data-request-id="${req.id}" class="toggle-details-btn text-sm font-semibold text-blue-600 hover:text-blue-800 py-1 px-3 rounded-full hover:bg-blue-50 transition-colors">${isExpanded ? 'Ver menos' : 'Ver más'}</button></div>` : ''}
     `;
 
+    // Asignación de todos los listeners
     card.querySelectorAll('.action-btn').forEach(b => b.onclick = handleAdminAction);
     card.querySelectorAll('.finalize-reception-btn').forEach(b => b.onclick = handleFinalizeReception);
     card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
