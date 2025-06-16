@@ -204,23 +204,32 @@
         };
 
         // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
-        const getRequestStatusColor = (s) => {
+        const getRequestStatusColor = (s, req) => {
             if (s === 'pending' || s === 'processing_partial_items') return 'border-l-4 border-red-500 bg-red-50';
-            if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped'].includes(s)) return 'border-l-4 border-yellow-500 bg-yellow-50';
-            if (s === 'completed') return 'border-l-4 border-green-500 bg-green-50';
-            if (s === 'completed_incomplete' || s === 'novelty_review') return 'border-l-4 border-yellow-500 bg-yellow-50';
+            if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped', 'completed_incomplete', 'novelty_review'].includes(s)) return 'border-l-4 border-yellow-500 bg-yellow-50';
+            if (s === 'completed') {
+                // Si está completada pero tiene una novedad, mantener el color amarillo de precaución
+                return req.novelty ? 'border-l-4 border-yellow-500 bg-yellow-50' : 'border-l-4 border-green-500 bg-green-50';
+            }
             if (s === 'cancelled') return 'border-l-4 border-red-800 bg-red-100';
             return 'border-l-4 border-gray-300 bg-gray-50';
         };
 
-        const translateStatus = (s) => ({
-            'pending':'Pendiente', 'processing_partial_items':'En Revisión',
-            'pending_nt_start': 'Pendiente por NT', 'pending_nt_active': 'Preparando NT',
-            'ready_to_ship': 'Por Enviar', 'shipping_details': 'Pendiente de Guía y Envío',
-            'shipped': 'Enviado (Por Recibir)', 'completed':'Recibido Completo', 
-            'completed_incomplete': 'Recibido Incompleto (Con Novedad)', 'novelty_review': 'En Revisión de Novedad',
-            'cancelled':'Cancelado'
-        }[s] || s);
+        const translateStatus = (s, req) => {
+            const statusMap = {
+                'pending':'Pendiente', 'processing_partial_items':'En Revisión',
+                'pending_nt_start': 'Pendiente por NT', 'pending_nt_active': 'Preparando NT',
+                'ready_to_ship': 'Por Enviar', 'shipping_details': 'Pendiente de Guía',
+                'shipped': 'Enviado (Por Recibir)', 'completed':'Recibido Completo', 
+                'completed_incomplete': 'Recibido Incompleto (Con Novedad)', 'novelty_review': 'En Revisión de Novedad',
+                'cancelled':'Cancelado'
+            };
+            // Si está completada pero tiene una novedad, mostrar "Recibido Incompleto"
+            if (s === 'completed' && req.novelty) {
+                return 'Recibido Incompleto (Resuelto)';
+            }
+            return statusMap[s] || s;
+        };
 
         // --- AUTENTICACIÓN Y ARRANQUE ---
         auth.onAuthStateChanged(user => {
@@ -279,7 +288,7 @@
                 const myShipped = allMyRequests.filter(r => r.status === 'shipped');
                 const myActive = applyFilters(allMyRequests.filter(r => !['completed', 'completed_incomplete', 'novelty_review', 'cancelled', 'shipped'].includes(r.status)), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
                 const myNovelty = applyFilters(allMyRequests.filter(r => ['completed_incomplete', 'novelty_review'].includes(r.status)), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
-                const myHistory = applyFilters(allMyRequests.filter(r => ['completed', 'cancelled'].includes(r.status)), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
+                const myHistory = applyFilters(allMyRequests.filter(r => r.status === 'completed' || r.status === 'cancelled'), dom.requesterSearchId, dom.requesterDateFrom, dom.requesterDateTo);
 
                 renderSection('myShippedRequests', dom.myShippedRequests, myShipped, 'requester', "No tienes traslados para recibir.");
                 renderSection('myPendingRequests', dom.myPendingRequests, myActive, 'requester', "No tienes solicitudes activas.");
@@ -333,7 +342,7 @@
         function createRequestCard(req, role) {
             const isExpanded = expandedRequestsState.has(req.id);
             const card = document.createElement('div');
-            card.className = `p-4 rounded-lg shadow-sm flex flex-col ${getRequestStatusColor(req.status)}`;
+            card.className = `p-4 rounded-lg shadow-sm flex flex-col ${getRequestStatusColor(req.status, req)}`;
 
             const hasItems = req.items && req.items.length > 0;
             const allNtItemsChecked = hasItems && req.status === 'pending_nt_active' && req.items.every(item => item.nt_checked);
@@ -347,17 +356,16 @@
                     const color = item.receivedQuantity < item.sentQuantity ? 'text-red-600' : 'text-green-700';
                     quantityDisplay += ` | Recibido: <b class="${color}">${item.receivedQuantity}</b>`;
                 }
-                const receptionInput = (role === 'requester' && req.status === 'shipped') ? `<div class="flex items-center"><label class="text-sm mr-2">Recibido:</label><input type="number" value="${item.sentQuantity}" data-request-id="${req.id}" data-item-index="${index}" class="reception-qty-input w-20 p-1 border rounded-md text-center"></div>` : '';
-                const adminInput = (role === 'admin' && req.status === 'processing_partial_items') ? `<input type="number" value="${item.sentQuantity ?? item.quantity}" data-request-id="${req.id}" data-item-index="${index}" class="admin-qty-input w-20 p-1 border rounded-md text-center">` : '';
+                const receptionInput = (role === 'requester' && req.status === 'shipped') ? `<div class="flex items-center"><label class="text-xs mr-2">Recibido:</label><input type="number" value="${item.sentQuantity}" data-request-id="${req.id}" data-item-index="${index}" class="reception-qty-input w-16 p-1 border rounded-md text-center text-sm"></div>` : '';
+                const adminInput = (role === 'admin' && req.status === 'processing_partial_items') ? `<input type="number" value="${item.sentQuantity ?? item.quantity}" data-request-id="${req.id}" data-item-index="${index}" class="admin-qty-input w-20 p-1 border rounded-md text-center">` : ``;
                 const itemCheckedHtml = (role === 'admin' && req.status === 'pending_nt_active') ? `<input type="checkbox" ${item.nt_checked ? 'checked' : ''} data-request-id="${req.id}" data-item-index="${index}" class="nt-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer">` : '';
                 const itemBgColor = (role === 'admin' && req.status === 'pending_nt_active') ? (item.nt_checked ? 'bg-green-100' : 'bg-red-100') : 'bg-white';
                 
-                return `<li class="p-2 rounded-md border ${itemBgColor} flex justify-between items-center text-sm"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">${quantityDisplay}</div></div>${receptionInput}${adminInput}${itemCheckedHtml}</li>`;
+                return `<li class="p-2 rounded-md border ${itemBgColor} flex justify-between items-center text-sm"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">${quantityDisplay}</div></div><div class="flex items-center gap-2">${receptionInput}${adminInput}${itemCheckedHtml}</div></li>`;
             }).join('') : '<p class="text-sm text-gray-500 italic">No hay artículos.</p>';
 
             let contentHtml = '';
             
-            // --- Lógica de Contenido Dinámico ---
             if (role === 'admin') {
                 if (req.status === 'pending') {
                     contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_processing" class="action-btn w-full bg-gray-800 hover:bg-black text-white font-bold py-2 px-3 rounded-md">Iniciar Revisión</button></div>`;
@@ -388,7 +396,6 @@
                     contentHtml += `<div id="noveltyForm-${req.id}" class="mt-4 p-4 bg-gray-100 border-t-2 space-y-4"><h5 class="font-bold text-lg">Gestionar Novedad</h5><div><label class="block text-sm font-medium">Causa:</label><select id="noveltyReason-${req.id}" data-request-id="${req.id}" class="novelty-input mt-1 block w-full p-2 border rounded-md"><option value="" selected disabled>-- Seleccione --</option><option value="Error de empaque">Error de empaque</option><option value="Perdida en transporte">Pérdida en transporte</option><option value="Otro">Otro</option></select></div><div id="noveltyOtherDiv-${req.id}" class="hidden"><label for="noveltyOtherReason-${req.id}" class="block text-sm font-medium">Especifique:</label><input type="text" id="noveltyOtherReason-${req.id}" data-request-id="${req.id}" class="novelty-input mt-1 block w-full p-2 border rounded-md"></div><div><label for="noveltySolution-${req.id}" class="block text-sm font-medium">Solución:</label><textarea id="noveltySolution-${req.id}" data-request-id="${req.id}" rows="3" class="novelty-input mt-1 block w-full p-2 border rounded-md"></textarea></div><button data-request-id="${req.id}" data-action="finalize_novelty" class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md disabled:bg-gray-400" disabled>Finalizar Novedad</button></div>`;
                 }
             }
-
             if (role === 'requester' && req.status === 'shipped') {
                 contentHtml += `<div class="mt-4 border-t-2 pt-4 space-y-3"><h5 class="font-bold text-md">Confirmar recepción</h5><div><label class="block text-sm font-medium">Obs. de recepción:</label><textarea id="receptionNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2"></textarea></div><button data-request-id="${req.id}" data-action="finalize_reception" class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Finalizar Recepción</button></div>`;
             }
@@ -397,14 +404,14 @@
             const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '';
             
             const infoBoxesHtml = `
-                <div class="space-y-2 mb-3">
-                    ${req.requesterNotes ? `<div class="p-2 bg-white rounded-lg border"><p class="text-xs font-semibold text-gray-600">Obs. Solicitante:</p><p class="text-sm italic">"${req.requesterNotes}"</p></div>` : ''}
-                    ${req.adminNotes ? `<div class="p-2 bg-white rounded-lg border"><p class="text-xs font-semibold text-gray-600">Nota Admin (Revisión):</p><p class="text-sm italic">"${req.adminNotes}"</p></div>` : ''}
-                    ${req.ntNumber ? `<div class="p-2 bg-white rounded-lg border"><p class="text-xs font-semibold text-gray-600">Nº Nota de Traslado:</p><p class="text-sm font-bold">${req.ntNumber}</p></div>` : ''}
-                    ${req.shippingNotes ? `<div class="p-2 bg-white rounded-lg border"><p class="text-xs font-semibold text-gray-600">Obs. de Envío:</p><p class="text-sm italic">"${req.shippingNotes}"</p></div>` : ''}
-                    ${req.shippingInfo ? `<div class="p-2 bg-white rounded-lg border"><p class="text-xs font-semibold text-gray-600">Guía de Envío:</p><p class="text-sm font-bold">${req.shippingInfo.hasTracking ? req.shippingInfo.trackingNumber : 'Sin guía'}</p></div>` : ''}
-                    ${(req.reception && req.reception.notes) ? `<div class="p-2 bg-white rounded-lg border"><p class="text-xs font-semibold text-gray-600">Obs. de Recepción:</p><p class="text-sm italic">"${req.reception.notes}"</p></div>` : ''}
-                    ${req.novelty ? `<div class="p-2 bg-yellow-100 rounded-lg border border-yellow-300"><p class="text-xs font-semibold text-yellow-800">Detalle de Novedad:</p><p class="text-sm"><b>Causa:</b> ${req.novelty.reason}</p><p class="text-sm"><b>Solución:</b> ${req.novelty.solution}</p></div>` : ''}
+                <div class="space-y-1">
+                    ${req.requesterNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Obs. Solicitante:</p><p class="italic text-gray-800">"${req.requesterNotes}"</p></div>` : ''}
+                    ${req.adminNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Nota Admin (Revisión):</p><p class="italic text-gray-800">"${req.adminNotes}"</p></div>` : ''}
+                    ${req.ntNumber ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Nº Nota de Traslado:</p><p class="font-bold text-gray-900">${req.ntNumber}</p></div>` : ''}
+                    ${req.shippingNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Obs. de Envío:</p><p class="italic text-gray-800">"${req.shippingNotes}"</p></div>` : ''}
+                    ${req.shippingInfo ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Guía de Envío:</p><p class="font-bold text-gray-900">${req.shippingInfo.hasTracking ? req.shippingInfo.trackingNumber : 'Sin guía'}</p></div>` : ''}
+                    ${(req.reception && req.reception.notes) ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Obs. de Recepción:</p><p class="italic text-gray-800">"${req.reception.notes}"</p></div>` : ''}
+                    ${req.novelty ? `<div class="p-2 bg-yellow-100 rounded-md border border-yellow-300 text-xs"><p class="font-semibold text-yellow-800">Detalle de Novedad:</p><p class="text-gray-800"><b>Causa:</b> ${req.novelty.reason}</p><p class="italic text-gray-800"><b>Solución:</b> "${req.novelty.solution}"</p></div>` : ''}
                 </div>`;
 
             card.innerHTML = `
@@ -414,13 +421,13 @@
                         <p class="text-sm text-gray-600">Para: <strong>${req.toWarehouse}</strong></p>
                         <p class="text-xs text-gray-400">ID: ${req.id} | Creada: ${creationDate}</p>
                         <p class="text-sm mt-1">Fecha Requerida: <b>${reqDate}</b></p>
-                        <span class="inline-block mt-2 px-2 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-800">${translateStatus(req.status)}</span>
+                        <span class="inline-block mt-2 px-2 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-800">${translateStatus(req.status, req)}</span>
                     </div>
                     ${(role === 'requester' && req.status === 'pending') ? `<div class="flex flex-col gap-1"><button data-request-id="${req.id}" data-action="edit_my_request" class="action-btn bg-blue-600 text-white text-xs px-2 py-1 rounded-md">Editar</button><button data-request-id="${req.id}" data-action="delete_my_request" class="action-btn bg-red-600 text-white text-xs px-2 py-1 rounded-md">Eliminar</button></div>` : ''}
                 </div>
                 <div id="details-${req.id}" class="flex-grow ${isExpanded ? '' : 'hidden'} mt-4 pt-4 border-t">
                     ${infoBoxesHtml}
-                    <h5 class="font-bold text-gray-700 mt-3 mb-2">Items:</h5>
+                    <h5 class="font-bold text-gray-700 mt-4 mb-2">Items:</h5>
                     <ul class="space-y-2">${itemsHtml}</ul>
                     ${contentHtml}
                 </div>
@@ -431,9 +438,9 @@
             card.querySelectorAll('.toggle-details-btn').forEach(b => b.onclick = handleToggleDetails);
             card.querySelectorAll('.nt-checkbox').forEach(c => c.onchange = handleNtCheckboxChange);
             card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
+            card.querySelectorAll('.reception-qty-input').forEach(i => i.onchange = () => {});
             card.querySelectorAll('.nt-number-input').forEach(i => i.onchange = handleNtNumberInput);
             card.querySelectorAll('.tracking-option').forEach(r => r.onchange = handleTrackingOptionChange);
-            card.querySelectorAll('.reception-qty-input').forEach(i => i.onchange = () => {}); // Placeholder
             card.querySelectorAll('.novelty-input').forEach(i => i.oninput = () => validateNoveltyForm(i.dataset.requestId));
             
             return card;
@@ -797,7 +804,7 @@
                 if (req.items && req.items.length > 0) {
                     req.items.forEach(item => {
                         excelData.push({ 
-                            'ID Traslado': req.id, 'Estado': translateStatus(req.status), 'Fecha Creación': creationDate, 
+                            'ID Traslado': req.id, 'Estado': translateStatus(req.status, req), 'Fecha Creación': creationDate, 
                             'Solicitante': req.requesterName, 'Bodega Destino': req.toWarehouse, 
                             'ID Producto': item.productId, 'Nombre Producto': item.productName, 
                             'U. Solicitadas': item.quantity, 'U. Enviadas': item.sentQuantity, 'U. Recibidas': item.receivedQuantity, 
@@ -806,13 +813,13 @@
                         });
                     });
                 } else {
-                    excelData.push({ 'ID Traslado': req.id, 'Estado': translateStatus(req.status), 'Fecha Creación': creationDate, 'Solicitante': req.requesterName, 'Bodega Destino': req.toWarehouse, 'ID Producto': 'N/A', 'Nombre Producto': 'Sin items', 'U. Solicitadas': 0, 'U. Enviadas': 0, 'U. Recibidas': 0, 'Obs. Solicitante': req.requesterNotes || '', 'Obs. Admin': req.adminNotes || '', 'Obs. Recepción': req.reception?.notes || '', 'Causa Novedad': '', 'Solución Novedad': '' });
+                    excelData.push({ 'ID Traslado': req.id, 'Estado': translateStatus(req.status, req), 'Fecha Creación': creationDate, 'Solicitante': req.requesterName, 'Bodega Destino': req.toWarehouse, 'ID Producto': 'N/A', 'Nombre Producto': 'Sin items', 'U. Solicitadas': 0, 'U. Enviadas': 0, 'U. Recibidas': 0, 'Obs. Solicitante': req.requesterNotes || '', 'Obs. Admin': req.adminNotes || '', 'Obs. Recepción': req.reception?.notes || '', 'Causa Novedad': '', 'Solución Novedad': '' });
                 }
             });
             const worksheet = XLSX.utils.json_to_sheet(excelData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Historial");
-            worksheet['!cols'] = [ { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 30 }, { wch: 50 } ];
+            worksheet['!cols'] = [ { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 30 }, { wch: 50 } ];
             XLSX.writeFile(workbook, "Historial_Traslados_Parabarberos.xlsx");
         }
         
