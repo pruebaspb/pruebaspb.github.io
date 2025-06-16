@@ -132,6 +132,7 @@
     </div>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIGURACIÓN DE FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyCS-MiXwA9JcuoXdw2vhYWr-UWwyubFlbI",
             authDomain: "estado-de-pruebas001.firebaseapp.com",
@@ -203,23 +204,11 @@
         };
 
         // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
-        
-        const getRequestStatusColor = (s) => { // Eliminamos el segundo parámetro 'req' que ya no es necesario
-            if (s === 'pending' || s === 'processing_partial_items') {
-                return 'border-l-4 border-red-500 bg-red-50';
-            }
-            if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped'].includes(s)) {
-                return 'border-l-4 border-yellow-500 bg-yellow-50';
-            }
-            if (s === 'completed') {
-                return 'border-l-4 border-green-500 bg-green-50';
-            }
-            if (s === 'completed_incomplete' || s === 'novelty_review') {
-                return 'border-l-4 border-yellow-500 bg-yellow-50';
-            }
-            if (s === 'cancelled') {
-                return 'border-l-4 border-red-800 bg-red-100';
-            }
+        const getRequestStatusColor = (s) => {
+            if (s === 'pending' || s === 'processing_partial_items') return 'border-l-4 border-red-500 bg-red-50';
+            if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped', 'completed_incomplete', 'novelty_review'].includes(s)) return 'border-l-4 border-yellow-500 bg-yellow-50';
+            if (s === 'completed') return 'border-l-4 border-green-500 bg-green-50';
+            if (s === 'cancelled') return 'border-l-4 border-red-800 bg-red-100';
             return 'border-l-4 border-gray-300 bg-gray-50';
         };
 
@@ -232,7 +221,6 @@
                 'completed_incomplete': 'Recibido Incompleto (Con Novedad)', 'novelty_review': 'En Revisión de Novedad',
                 'cancelled':'Cancelado'
             };
-            // Si está completada pero tiene una novedad, mostrar "Recibido Incompleto"
             if (s === 'completed' && req.novelty) {
                 return 'Recibido Incompleto (Resuelto)';
             }
@@ -412,7 +400,7 @@
             const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '';
             
             const infoBoxesHtml = `
-                <div class="space-y-1">
+                <div class="space-y-1 mt-2">
                     ${req.requesterNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Obs. Solicitante:</p><p class="italic text-gray-800">"${req.requesterNotes}"</p></div>` : ''}
                     ${req.adminNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Nota Admin (Revisión):</p><p class="italic text-gray-800">"${req.adminNotes}"</p></div>` : ''}
                     ${req.ntNumber ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Nº Nota de Traslado:</p><p class="font-bold text-gray-900">${req.ntNumber}</p></div>` : ''}
