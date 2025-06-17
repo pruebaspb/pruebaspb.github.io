@@ -47,7 +47,6 @@
                             <div><label for="requesterName" class="block text-sm font-medium text-gray-700">Solicitante:</label><select id="requesterName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100" disabled></select></div>
                             <div><label for="deliveryDate" class="block text-sm font-medium text-gray-700">Fecha de solicitud</label><input type="date" id="deliveryDate" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm"></div>
                         </div>
-                        <input type="hidden" id="fromWarehouse" value="Bodega Principal">
                         <div><label for="requesterNotes" class="block text-sm font-medium text-gray-700">Observaciones</label><textarea id="requesterNotes" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm" placeholder="Ej: Necesito este pedido con urgencia..."></textarea></div>
                         <button type="submit" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg">ENVIAR SOLICITUD DE TRASLADO</button>
                     </form>
@@ -55,7 +54,7 @@
             </div>
             <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg card">
                 <h3 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Mis solicitudes</h3>
-                <h4 class="text-xl font-bold text-yellow-600 mb-2">Por Recibir</h4>
+                <h4 class="text-xl font-semibold text-yellow-600 mb-2">Por Recibir</h4>
                 <div id="myShippedRequests" class="grid gap-4 mb-6 border-b pb-6"></div>
                 <div class="space-y-2 mb-4">
                     <input type="text" id="requesterSearchId" placeholder="Buscar por ID..." class="w-full px-3 py-2 border rounded-lg">
@@ -64,6 +63,7 @@
                 <div class="max-h-[80vh] overflow-y-auto">
                     <h4 class="text-lg font-semibold text-black mb-2">Activas</h4>
                     <div id="myPendingRequests" class="grid gap-4 mb-6"></div>
+
                     <h4 class="text-lg font-semibold text-black mb-2">Historial</h4>
                     <h5 class="text-md font-semibold text-yellow-600 mb-2 mt-4">Con Novedad</h5>
                     <div id="myNoveltyRequests" class="grid gap-4 mb-6"></div>
@@ -71,7 +71,6 @@
                     <div id="myCompletedRequests" class="grid gap-4 mb-6"></div>
                     <h5 class="text-md font-semibold text-red-700 mb-2">Canceladas</h5>
                     <div id="myCancelledRequests" class="grid gap-4"></div>
-                </div>
                 </div>
             </div>
         </div>
@@ -171,7 +170,7 @@
         const dom = {
             productList: document.getElementById('productList'), currentTransferRequest: document.getElementById('currentTransferRequest'),
             transferForm: document.getElementById('transferForm'), toWarehouse: document.getElementById('toWarehouse'),
-            fromWarehouse: document.getElementById('fromWarehouse'), // Añadido
+            fromWarehouse: document.getElementById('fromWarehouse'),
             requesterName: document.getElementById('requesterName'), searchInput: document.getElementById('searchInput'),
             requesterView: document.getElementById('requesterView'), adminView: document.getElementById('adminView'),
             myShippedRequests: document.getElementById('myShippedRequests'), myPendingRequests: document.getElementById('myPendingRequests'), 
@@ -413,7 +412,7 @@
                 <div id="details-${req.id}" class="flex-grow ${isExpanded ? '' : 'hidden'} mt-4 pt-4 border-t">
                     ${infoBoxesHtml}
                     <h5 class="font-bold text-gray-700 mt-4 mb-2">Items:</h5>
-                    <ul class="space-y-2">${itemsHtml}</ul>
+                    <ul class="space-y-2 max-h-60 overflow-y-auto">${itemsHtml}</ul>
                     ${contentHtml}
                 </div>
                 <div class="text-center mt-2"><button data-request-id="${req.id}" class="toggle-details-btn text-sm font-semibold text-blue-600 hover:text-blue-800">Ver ${isExpanded ? 'menos' : 'más'}</button></div>
@@ -423,98 +422,97 @@
             card.querySelectorAll('.toggle-details-btn').forEach(b => b.onclick = handleToggleDetails);
             card.querySelectorAll('.nt-checkbox').forEach(c => {
                 c.oninput = () => validateNtForm(c.dataset.requestId);
-                c.onchange = handleNtCheckboxChange; // Mantiene el guardado en la DB
-            });
-            card.querySelectorAll('.nt-number-input').forEach(i => {
-                i.oninput = () => validateNtForm(i.dataset.requestId); // Para validación visual
-                i.onchange = handleNtNumberInput; // Para guardar en la DB al perder foco
+                c.onchange = handleNtCheckboxChange;
             });
             card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
             card.querySelectorAll('.reception-qty-input').forEach(i => i.onchange = () => {});
-            card.querySelectorAll('.nt-number-input').forEach(i => i.oninput = handleNtNumberInput);
+            card.querySelectorAll('.nt-number-input').forEach(i => {
+                i.oninput = () => validateNtForm(i.dataset.requestId);
+                i.onchange = handleNtNumberInput;
+            });
             card.querySelectorAll('.tracking-option').forEach(r => r.onchange = handleTrackingOptionChange);
             card.querySelectorAll('.novelty-input').forEach(i => i.oninput = () => validateNoveltyForm(i.dataset.requestId));
             
             return card;
         }
+
         async function handleAdminAction(event) {
-    const button = event.currentTarget;
-    const { requestId, action } = button.dataset;
-    const reqRef = transfersCollection.doc(requestId);
-    let updateData = {};
+            const button = event.currentTarget;
+            const { requestId, action } = button.dataset;
+            const reqRef = transfersCollection.doc(requestId);
+            let updateData = {};
 
-    const actions = {
-        start_processing: async () => {
-            const doc = await reqRef.get();
-            if(doc.exists) {
-                const itemsToProcess = doc.data().items.map(item => ({ ...item, sentQuantity: item.quantity, nt_checked: false }));
-                updateData = { status: 'processing_partial_items', items: itemsToProcess };
-                // NO se expande automáticamente
-            }
-        },
-        save_admin_note: async () => {
-            await reqRef.update({ adminNotes: document.getElementById(`adminNotes-${requestId}`).value });
-            alert('Nota guardada');
-        },
-        finalize_processing: () => {
-            if (confirm("¿Finalizar revisión?")) updateData = { status: 'pending_nt_start' };
-        },
-        start_nt_preparation: () => {
-            updateData = { status: 'pending_nt_active' };
-        },
-        return_to_pending: async () => {
-            if (confirm("¿Devolver a revisión? Se borrarán los datos de los pasos posteriores.")) {
-                const docToReset = await reqRef.get();
-                if (docToReset.exists) {
-                    const resetItems = docToReset.data().items.map(({ productId, productName, quantity }) => ({ productId, productName, quantity }));
-                    updateData = { status: 'pending', items: resetItems, adminNotes: firebase.firestore.FieldValue.delete(), ntNumber: firebase.firestore.FieldValue.delete(), shippingNotes: firebase.firestore.FieldValue.delete(), shippingInfo: firebase.firestore.FieldValue.delete(), reception: firebase.firestore.FieldValue.delete(), novelty: firebase.firestore.FieldValue.delete() };
+            const actions = {
+                start_processing: async () => {
+                    const doc = await reqRef.get();
+                    if(doc.exists) {
+                        const itemsToProcess = doc.data().items.map(item => ({ ...item, sentQuantity: item.quantity, nt_checked: false }));
+                        updateData = { status: 'processing_partial_items', items: itemsToProcess };
+                    }
+                },
+                save_admin_note: async () => {
+                    await reqRef.update({ adminNotes: document.getElementById(`adminNotes-${requestId}`).value });
+                    alert('Nota guardada');
+                },
+                finalize_processing: () => {
+                    if (confirm("¿Finalizar revisión?")) updateData = { status: 'pending_nt_start' };
+                },
+                start_nt_preparation: () => {
+                    updateData = { status: 'pending_nt_active' };
+                },
+                return_to_pending: async () => {
+                    if (confirm("¿Devolver a revisión? Se borrarán los datos de los pasos posteriores.")) {
+                        const docToReset = await reqRef.get();
+                        if (docToReset.exists) {
+                            const resetItems = docToReset.data().items.map(({ productId, productName, quantity }) => ({ productId, productName, quantity }));
+                            updateData = { status: 'pending', items: resetItems, adminNotes: firebase.firestore.FieldValue.delete(), ntNumber: firebase.firestore.FieldValue.delete(), shippingNotes: firebase.firestore.FieldValue.delete(), shippingInfo: firebase.firestore.FieldValue.delete(), reception: firebase.firestore.FieldValue.delete(), novelty: firebase.firestore.FieldValue.delete() };
+                        }
+                    }
+                },
+                ready_to_ship: () => {
+                    if (confirm("¿Marcar como listo para enviar?")) updateData = { status: 'ready_to_ship' };
+                },
+                save_shipping_note: async () => {
+                    await reqRef.update({ shippingNotes: document.getElementById(`shippingNotes-${requestId}`).value });
+                    alert('Nota de envío guardada');
+                },
+                proceed_to_shipping: () => {
+                    updateData = { status: 'shipping_details' };
+                },
+                finalize_shipment: () => {
+                    const hasTracking = document.querySelector(`input[name="hasTracking-${requestId}"]:checked`).value === 'yes';
+                    const trackingNumber = hasTracking ? document.getElementById(`trackingNumber-${requestId}`).value : null;
+                    if (hasTracking && !trackingNumber) {
+                        alert("Por favor, ingresa el número de guía.");
+                        return 'stop';
+                    }
+                    updateData = { status: 'shipped', shippingInfo: { hasTracking, trackingNumber } };
+                },
+                start_novelty_review: () => {
+                    updateData = { status: 'novelty_review' };
+                },
+                finalize_novelty: () => {
+                    const reasonSelect = document.getElementById(`noveltyReason-${requestId}`);
+                    let reason = reasonSelect.value === 'Otro' ? document.getElementById(`noveltyOtherReason-${requestId}`).value.trim() : reasonSelect.value;
+                    const solution = document.getElementById(`noveltySolution-${requestId}`).value.trim();
+                    updateData = { status: 'completed', novelty: { reason, solution, resolvedBy: currentUserData.user.email, timestamp: firebase.firestore.FieldValue.serverTimestamp() } };
+                },
+                finalize_reception: () => { handleFinalizeReception(event); return 'stop'; },
+                delete_my_request: () => { handleDeleteMyRequest(event); return 'stop'; },
+                edit_my_request: () => { handleStartEdit(event); return 'stop'; },
+                cancel: () => {
+                    if (confirm("¿Cancelar solicitud?")) updateData = { status: 'cancelled' };
                 }
-            }
-        },
-        ready_to_ship: () => {
-            if (confirm("¿Marcar como listo para enviar?")) updateData = { status: 'ready_to_ship' };
-        },
-        save_shipping_note: async () => {
-            await reqRef.update({ shippingNotes: document.getElementById(`shippingNotes-${requestId}`).value });
-            alert('Nota de envío guardada');
-        },
-        proceed_to_shipping: () => {
-            updateData = { status: 'shipping_details' };
-        },
-        finalize_shipment: () => {
-            const hasTracking = document.querySelector(`input[name="hasTracking-${requestId}"]:checked`).value === 'yes';
-            const trackingNumber = hasTracking ? document.getElementById(`trackingNumber-${requestId}`).value : null;
-            if (hasTracking && !trackingNumber) {
-                alert("Por favor, ingresa el número de guía.");
-                return 'stop';
-            }
-            updateData = { status: 'shipped', shippingInfo: { hasTracking, trackingNumber } };
-        },
-        start_novelty_review: () => {
-            updateData = { status: 'novelty_review' };
-            // NO se expande automáticamente
-        },
-        finalize_novelty: () => {
-            const reasonSelect = document.getElementById(`noveltyReason-${requestId}`);
-            let reason = reasonSelect.value === 'Otro' ? document.getElementById(`noveltyOtherReason-${requestId}`).value.trim() : reasonSelect.value;
-            const solution = document.getElementById(`noveltySolution-${requestId}`).value.trim();
-            updateData = { status: 'completed', novelty: { reason, solution, resolvedBy: currentUserData.user.email, timestamp: firebase.firestore.FieldValue.serverTimestamp() } };
-        },
-        finalize_reception: () => { handleFinalizeReception(event); return 'stop'; },
-        delete_my_request: () => { handleDeleteMyRequest(event); return 'stop'; },
-        edit_my_request: () => { handleStartEdit(event); return 'stop'; },
-        cancel: () => {
-            if (confirm("¿Cancelar solicitud?")) updateData = { status: 'cancelled' };
-        }
-    };
-    
-    const result = await actions[action]?.();
-    if (result === 'stop') return;
+            };
+            
+            const result = await actions[action]?.();
+            if (result === 'stop') return;
 
-    if (Object.keys(updateData).length > 0) {
-        await reqRef.update(updateData);
-    }
-}
+            if (Object.keys(updateData).length > 0) {
+                await reqRef.update(updateData);
+            }
+        }
+        
         function handleToggleDetails(evento) {
             const requestId = evento.currentTarget.dataset.requestId;
             expandedRequestsState.has(requestId) ? expandedRequestsState.delete(requestId) : expandedRequestsState.add(requestId);
@@ -544,34 +542,30 @@
                 await reqRef.update({ items });
             }
         }
+
         async function handleNtNumberInput(event) {
-    const { requestId } = event.currentTarget.dataset;
-    const ntNumber = event.currentTarget.value;
-    try {
-        await transfersCollection.doc(requestId).update({ ntNumber });
-    } catch (e) {
-        console.error("Error al guardar el número de NT:", e);
-    }
-}
+            const { requestId } = event.currentTarget.dataset;
+            const ntNumber = event.currentTarget.value;
+            await transfersCollection.doc(requestId).update({ ntNumber });
+        }
         function validateNtForm(requestId) {
-    const ntInput = document.getElementById(`ntNumber-${requestId}`);
-    const checkboxes = document.querySelectorAll(`.nt-checkbox[data-request-id="${requestId}"]`);
-    const readyBtn = document.querySelector(`button[data-action="ready_to_ship"][data-request-id="${requestId}"]`);
+            const ntInput = document.getElementById(`ntNumber-${requestId}`);
+            const checkboxes = document.querySelectorAll(`.nt-checkbox[data-request-id="${requestId}"]`);
+            const readyBtn = document.querySelector(`button[data-action="ready_to_ship"][data-request-id="${requestId}"]`);
 
-    if (!ntInput || !readyBtn) return;
+            if (!ntInput || !readyBtn) return;
 
-    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    const hasText = ntInput.value.trim() !== '';
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            const hasText = ntInput.value.trim() !== '';
 
-    if (allChecked && hasText) {
-        readyBtn.disabled = false;
-        readyBtn.classList.remove('disabled:bg-gray-400');
-    } else {
-        readyBtn.disabled = true;
-        readyBtn.classList.add('disabled:bg-gray-400');
-    }
-}
-
+            if (allChecked && hasText) {
+                readyBtn.disabled = false;
+                readyBtn.classList.remove('disabled:bg-gray-400');
+            } else {
+                readyBtn.disabled = true;
+                readyBtn.classList.add('disabled:bg-gray-400');
+            }
+        }
         function handleTrackingOptionChange(event) {
             const requestId = event.currentTarget.name.split('-')[1];
             document.getElementById(`trackingNumberDiv-${requestId}`).classList.toggle('hidden', event.currentTarget.value !== 'yes');
@@ -879,3 +873,4 @@
         }
     });
 </script>
+</html>
