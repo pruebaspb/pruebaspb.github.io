@@ -495,7 +495,7 @@
                 proceed_to_shipping: () => {
                     updateData = { status: 'shipping_details' };
                 },
-                finalize_shipment: ()_ => {
+                finalize_shipment: () => {
                     const hasTracking = document.querySelector(`input[name="hasTracking-${requestId}"]:checked`).value === 'yes';
                     const trackingNumber = hasTracking ? document.getElementById(`trackingNumber-${requestId}`).value : null;
                     if (hasTracking && !trackingNumber) {
