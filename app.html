@@ -424,7 +424,7 @@
             card.querySelectorAll('.nt-checkbox').forEach(c => c.onchange = handleNtCheckboxChange);
             card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
             card.querySelectorAll('.reception-qty-input').forEach(i => i.onchange = () => {});
-            card.querySelectorAll('.nt-number-input').forEach(i => i.onchange = handleNtNumberInput);
+            card.querySelectorAll('.nt-number-input').forEach(i => i.oninput = handleNtNumberInput);
             card.querySelectorAll('.tracking-option').forEach(r => r.onchange = handleTrackingOptionChange);
             card.querySelectorAll('.novelty-input').forEach(i => i.oninput = () => validateNoveltyForm(i.dataset.requestId));
             
