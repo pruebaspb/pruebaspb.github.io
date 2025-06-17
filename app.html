@@ -54,8 +54,9 @@
                 </div>
             </div>
             
-            <!-- === INICIO DEL CAMBIO DEFINITIVO === -->
-            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg card">
+            <!-- === INICIO DEL CAMBIO === -->
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg card flex flex-col">
+                <!-- Contenido Fijo -->
                 <h3 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Mis solicitudes</h3>
                 <div class="space-y-2 mb-4">
                     <input type="text" id="requesterSearchId" placeholder="Buscar por ID..." class="w-full px-3 py-2 border rounded-lg">
@@ -65,8 +66,8 @@
                     </div>
                 </div>
 
-                <!-- Contenedor con SCROLL, COPIADO DEL PERFIL DE ADMIN -->
-                <div class="max-h-[80vh] overflow-y-auto">
+                <!-- Contenedor con Scroll -->
+                <div class="flex-1 overflow-y-auto min-h-0">
                     <h4 class="text-xl font-bold text-yellow-600 mb-2">Por Recibir</h4>
                     <div id="myShippedRequests" class="grid gap-4 mb-6 border-b pb-6"></div>
 
@@ -85,7 +86,7 @@
                     <div id="myCancelledRequests" class="grid gap-4"></div>
                 </div>
             </div>
-            <!-- === FIN DEL CAMBIO DEFINITIVO === -->
+            <!-- === FIN DEL CAMBIO === -->
         </div>
 
         <!-- VISTA DE ADMINISTRADOR -->
@@ -494,7 +495,7 @@
                 proceed_to_shipping: () => {
                     updateData = { status: 'shipping_details' };
                 },
-                finalize_shipment: () => {
+                finalize_shipment: ()_ => {
                     const hasTracking = document.querySelector(`input[name="hasTracking-${requestId}"]:checked`).value === 'yes';
                     const trackingNumber = hasTracking ? document.getElementById(`trackingNumber-${requestId}`).value : null;
                     if (hasTracking && !trackingNumber) {
