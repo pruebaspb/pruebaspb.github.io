@@ -42,6 +42,7 @@
                     <input type="hidden" id="editingRequestId">
                         <h3 class="text-xl font-semibold mb-3 text-gray-800"> Detalles de traslado</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label for="fromWarehouse" class="block text-sm font-medium text-gray-700">Bodega Origen:</label><select id="fromWarehouse" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm"></select></div>
                             <div><label for="toWarehouse" class="block text-sm font-medium text-gray-700">Bodega Destino:</label><select id="toWarehouse" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm"></select></div>
                             <div><label for="requesterName" class="block text-sm font-medium text-gray-700">Solicitante:</label><select id="requesterName" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100" disabled></select></div>
                             <div><label for="deliveryDate" class="block text-sm font-medium text-gray-700">Fecha de solicitud</label><input type="date" id="deliveryDate" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm"></div>
@@ -821,6 +822,7 @@
             dom.productList.querySelectorAll('.add-to-transfer-btn').forEach(b => b.onclick = handleAddToTransfer);
         }
 
+        // --- FUNCIÓN DE INICIALIZACIÓN PRINCIPAL ---
         async function initializeApp() {
             setupUIForUser();
             allProducts = await loadAndTransformProducts();
@@ -828,18 +830,20 @@
             renderCurrentTransfer();
             
             document.getElementById('deliveryDate').valueAsDate = new Date();
-            dom.toWarehouse.innerHTML = '<option value="" selected disabled>-- Seleccione una bodega --</option>' + ['Bodega Cali Centro', 'Bodega Cali Sur', 'Bodega Pasto', 'Bodega Tulua', 'Bodega Medellín'].map(w => `<option value="${w}">${w}</option>`).join('');
             
+            // --- BLOQUE A REEMPLAZAR ---
+            const warehouseOptions = ['Bodega Cali Centro', 'Bodega Cali Sur', 'Bodega Pasto', 'Bodega Tulua', 'Bodega Medellín'];
+            const originWarehouseOptions = ['Bodega Principal', ...warehouseOptions]; // Crea una nueva lista con "Bodega Principal"
+            dom.fromWarehouse.innerHTML = '<option value="" selected disabled>-- Seleccione una bodega --</option>' + originWarehouseOptions.map(w => `<option value="${w}">${w}</option>`).join('');
+            dom.toWarehouse.innerHTML = '<option value="" selected disabled>-- Seleccione una bodega --</option>' + warehouseOptions.map(w => `<option value="${w}">${w}</option>`).join('');
             dom.exportExcelBtn.onclick = exportHistoryToExcel;
             dom.uploadProductsBtn.onclick = handleProductUpload;
             dom.transferForm.onsubmit = handleSubmitTransferForm;
             dom.searchInput.oninput = () => renderProducts(allProducts.filter(p => p.name.toLowerCase().includes(dom.searchInput.value.toLowerCase())));
             dom.productFile.onchange = () => { dom.fileNameDisplay.textContent = dom.productFile.files.length > 0 ? dom.productFile.files[0].name : 'Ningún archivo seleccionado.'; dom.uploadStatus.textContent = ''; };
-            
             ['requesterSearchId', 'requesterDateFrom', 'requesterDateTo', 'adminActiveSearchId', 'adminActiveDateFrom', 'adminActiveDateTo', 'adminHistorySearchId', 'adminHistoryDateFrom', 'adminHistoryDateTo'].forEach(id => dom[id]?.addEventListener('input', renderAllSections));
-            
             transfersCollection.orderBy("timestamp", "desc").onSnapshot(snapshot => {
-                allTransferRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            allTransferRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderAllSections();
             }, error => console.error("Error al conectar: ", error));
         }
