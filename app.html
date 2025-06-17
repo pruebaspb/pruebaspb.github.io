@@ -163,18 +163,20 @@
         let allProducts = [], currentTransferItems = [], allTransferRequests = [], currentUserData = null;
         const expandedRequestsState = new Set();
         const sectionDisplayCounts = {};
-        const INITIAL_DISPLAY_COUNT = 2; // Restaurado a 2
+        const INITIAL_DISPLAY_COUNT = 2;
         const LOAD_MORE_COUNT = 10;
         currentTransferItems = JSON.parse(localStorage.getItem('currentTransferDraft')) || [];
 
-        // --- REFERENCIAS AL DOM (Corregidas para incluir todo) ---
+        // --- REFERENCIAS AL DOM ---
         const dom = {
             productList: document.getElementById('productList'), currentTransferRequest: document.getElementById('currentTransferRequest'),
             transferForm: document.getElementById('transferForm'), toWarehouse: document.getElementById('toWarehouse'),
+            fromWarehouse: document.getElementById('fromWarehouse'), // Añadido
             requesterName: document.getElementById('requesterName'), searchInput: document.getElementById('searchInput'),
             requesterView: document.getElementById('requesterView'), adminView: document.getElementById('adminView'),
             myShippedRequests: document.getElementById('myShippedRequests'), myPendingRequests: document.getElementById('myPendingRequests'), 
-            myNoveltyRequests: document.getElementById('myNoveltyRequests'), myCompletedRequests: document.getElementById('myCompletedRequests'), myCancelledRequests: document.getElementById('myCancelledRequests'),
+            myHistoryRequests: document.getElementById('myHistoryRequests'), myNoveltyRequests: document.getElementById('myNoveltyRequests'),
+            myCompletedRequests: document.getElementById('myCompletedRequests'), myCancelledRequests: document.getElementById('myCancelledRequests'),
             adminPendingRequests: document.getElementById('adminPendingRequests'), adminPendingNtRequests: document.getElementById('adminPendingNtRequests'),
             adminReadyToShipRequests: document.getElementById('adminReadyToShipRequests'), adminShippingDetailsRequests: document.getElementById('adminShippingDetailsRequests'),
             adminShippedRequests: document.getElementById('adminShippedRequests'), adminCompletedRequests: document.getElementById('adminCompletedRequests'),
@@ -188,11 +190,11 @@
             userEmailDisplay: document.getElementById('userEmailDisplay'), logoutBtn: document.getElementById('logoutBtn')
         };
 
-        // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES (Corregido) ---
+        // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
         const getRequestStatusColor = (s) => {
             if (s === 'pending' || s === 'processing_partial_items') return 'border-l-4 border-red-500 bg-red-50';
             if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped', 'completed_incomplete', 'novelty_review'].includes(s)) return 'border-l-4 border-yellow-500 bg-yellow-50';
-            if (s === 'completed') return 'border-l-4 border-green-500 bg-green-50'; // Siempre verde si está completada
+            if (s === 'completed') return 'border-l-4 border-green-500 bg-green-50';
             if (s === 'cancelled') return 'border-l-4 border-red-800 bg-red-100';
             return 'border-l-4 border-gray-300 bg-gray-50';
         };
@@ -591,12 +593,12 @@
         async function handleSubmitTransferForm(event) {
             event.preventDefault();
             const editingId = document.getElementById('editingRequestId').value;
-            if (!dom.toWarehouse.value || !dom.requesterName.value || currentTransferItems.length === 0 || !document.getElementById('deliveryDate').value) {
+            if (!dom.fromWarehouse.value || !dom.toWarehouse.value || !dom.requesterName.value || currentTransferItems.length === 0 || !document.getElementById('deliveryDate').value) {
                 return alert("Por favor, completa todos los campos requeridos.");
             }
             const transferData = {
                 items: currentTransferItems.map(item => ({ ...item, sentQuantity: 0, receivedQuantity: 0 })),
-                fromWarehouse: document.getElementById('fromWarehouse').value,
+                fromWarehouse: dom.fromWarehouse.value,
                 toWarehouse: dom.toWarehouse.value,
                 requesterName: dom.requesterName.value,
                 deliveryDate: document.getElementById('deliveryDate').value,
@@ -617,6 +619,7 @@
             const requestToEdit = allTransferRequests.find(r => r.id === event.currentTarget.dataset.requestId);
             if (!requestToEdit) return;
             document.getElementById('editingRequestId').value = requestToEdit.id;
+            dom.fromWarehouse.value = requestToEdit.fromWarehouse;
             dom.toWarehouse.value = requestToEdit.toWarehouse;
             document.getElementById('deliveryDate').value = requestToEdit.deliveryDate;
             document.getElementById('requesterNotes').value = requestToEdit.requesterNotes || '';
@@ -822,7 +825,6 @@
             dom.productList.querySelectorAll('.add-to-transfer-btn').forEach(b => b.onclick = handleAddToTransfer);
         }
 
-        // --- FUNCIÓN DE INICIALIZACIÓN PRINCIPAL ---
         async function initializeApp() {
             setupUIForUser();
             allProducts = await loadAndTransformProducts();
@@ -831,19 +833,24 @@
             
             document.getElementById('deliveryDate').valueAsDate = new Date();
             
-            // --- BLOQUE A REEMPLAZAR ---
             const warehouseOptions = ['Bodega Cali Centro', 'Bodega Cali Sur', 'Bodega Pasto', 'Bodega Tulua', 'Bodega Medellín'];
-            const originWarehouseOptions = ['Bodega Principal', ...warehouseOptions]; // Crea una nueva lista con "Bodega Principal"
-            dom.fromWarehouse.innerHTML = '<option value="" selected disabled>-- Seleccione una bodega --</option>' + originWarehouseOptions.map(w => `<option value="${w}">${w}</option>`).join('');
-            dom.toWarehouse.innerHTML = '<option value="" selected disabled>-- Seleccione una bodega --</option>' + warehouseOptions.map(w => `<option value="${w}">${w}</option>`).join('');
+            const originWarehouseOptions = ['Bodega Principal', ...warehouseOptions];
+            
+            dom.fromWarehouse.innerHTML = '<option value="" selected disabled>-- Seleccione una bodega --</option>' + 
+                                          originWarehouseOptions.map(w => `<option value="${w}">${w}</option>`).join('');
+            dom.toWarehouse.innerHTML = '<option value="" selected disabled>-- Seleccione una bodega --</option>' + 
+                                        warehouseOptions.map(w => `<option value="${w}">${w}</option>`).join('');
+            
             dom.exportExcelBtn.onclick = exportHistoryToExcel;
             dom.uploadProductsBtn.onclick = handleProductUpload;
             dom.transferForm.onsubmit = handleSubmitTransferForm;
             dom.searchInput.oninput = () => renderProducts(allProducts.filter(p => p.name.toLowerCase().includes(dom.searchInput.value.toLowerCase())));
             dom.productFile.onchange = () => { dom.fileNameDisplay.textContent = dom.productFile.files.length > 0 ? dom.productFile.files[0].name : 'Ningún archivo seleccionado.'; dom.uploadStatus.textContent = ''; };
+            
             ['requesterSearchId', 'requesterDateFrom', 'requesterDateTo', 'adminActiveSearchId', 'adminActiveDateFrom', 'adminActiveDateTo', 'adminHistorySearchId', 'adminHistoryDateFrom', 'adminHistoryDateTo'].forEach(id => dom[id]?.addEventListener('input', renderAllSections));
+            
             transfersCollection.orderBy("timestamp", "desc").onSnapshot(snapshot => {
-            allTransferRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                allTransferRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderAllSections();
             }, error => console.error("Error al conectar: ", error));
         }
