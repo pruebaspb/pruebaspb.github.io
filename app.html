@@ -332,6 +332,7 @@
             const hasNtNumber = req.status === 'pending_nt_active' && req.ntNumber && req.ntNumber.trim() !== '';
             const canProceedFromNt = allNtItemsChecked && hasNtNumber;
 
+            // La lógica para generar el HTML de los ítems se mantiene igual
             const itemsHtml = hasItems ? (req.items || []).map((item, index) => {
                 let quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
                 if (item.sentQuantity !== undefined) quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`;
@@ -348,7 +349,7 @@
             }).join('') : '<p class="text-sm text-gray-500 italic">No hay artículos.</p>';
 
             let contentHtml = '';
-            
+            // La lógica para los botones y formularios de admin y solicitante se mantiene igual...
             if (role === 'admin') {
                 if (req.status === 'pending') {
                     contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_processing" class="action-btn w-full bg-gray-800 hover:bg-black text-white font-bold py-2 px-3 rounded-md">Iniciar Revisión</button></div>`;
@@ -396,7 +397,8 @@
                     ${(req.reception && req.reception.notes) ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Obs. de Recepción:</p><p class="italic text-gray-800">"${req.reception.notes}"</p></div>` : ''}
                     ${req.novelty ? `<div class="p-2 bg-yellow-100 rounded-md border border-yellow-300 text-xs"><p class="font-semibold text-yellow-800">Detalle de Novedad:</p><p class="text-gray-800"><b>Causa:</b> ${req.novelty.reason}</p><p class="italic text-gray-800"><b>Solución:</b> "${req.novelty.solution}"</p></div>` : ''}
                 </div>`;
-
+            
+            // --- CAMBIO CLAVE AQUÍ ---
             card.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
@@ -417,8 +419,14 @@
                 <div class="text-center mt-2"><button data-request-id="${req.id}" class="toggle-details-btn text-sm font-semibold text-blue-600 hover:text-blue-800">Ver ${isExpanded ? 'menos' : 'más'}</button></div>
             `;
             
+            // --- ASIGNACIÓN DE LISTENERS CORREGIDA ---
             card.querySelectorAll('.action-btn').forEach(b => b.onclick = handleAdminAction);
             card.querySelectorAll('.toggle-details-btn').forEach(b => b.onclick = handleToggleDetails);
+            card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
+            card.querySelectorAll('.reception-qty-input').forEach(i => i.onchange = () => {});
+            card.querySelectorAll('.tracking-option').forEach(r => r.onchange = handleTrackingOptionChange);
+            
+            // Listeners para el formulario de NT
             card.querySelectorAll('.nt-checkbox').forEach(c => {
                 c.oninput = () => validateNtForm(c.dataset.requestId);
                 c.onchange = handleNtCheckboxChange;
@@ -427,13 +435,16 @@
                 i.oninput = () => validateNtForm(i.dataset.requestId);
                 i.onchange = handleNtNumberInput;
             });
-            card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
-            card.querySelectorAll('.reception-qty-input').forEach(i => i.onchange = () => {});
-            card.querySelectorAll('.tracking-option').forEach(r => r.onchange = handleTrackingOptionChange);
-            card.querySelectorAll('.novelty-input').forEach(i => i.oninput = () => validateNoveltyForm(i.dataset.requestId));
+
+            // Listeners para el formulario de Novedad
+            card.querySelectorAll('.novelty-input').forEach(i => {
+                i.oninput = () => validateNoveltyForm(i.dataset.requestId);
+            });
             
             return card;
         }
+
+        // ... el resto de las funciones como handleAdminAction, validateNoveltyForm, etc., se mantienen igual.
 
         async function handleAdminAction(event) {
             const button = event.currentTarget;
