@@ -322,8 +322,7 @@
                 div.appendChild(button);
             }
         }
-        
-        function createRequestCard(req, role) {
+                function createRequestCard(req, role) {
             const isExpanded = expandedRequestsState.has(req.id);
             const card = document.createElement('div');
             card.className = `p-4 rounded-lg shadow-sm flex flex-col ${getRequestStatusColor(req.status, req)}`;
