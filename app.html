@@ -421,7 +421,14 @@
             
             card.querySelectorAll('.action-btn').forEach(b => b.onclick = handleAdminAction);
             card.querySelectorAll('.toggle-details-btn').forEach(b => b.onclick = handleToggleDetails);
-            card.querySelectorAll('.nt-checkbox').forEach(c => c.onchange = handleNtCheckboxChange);
+            card.querySelectorAll('.nt-checkbox').forEach(c => {
+                c.oninput = () => validateNtForm(c.dataset.requestId);
+                c.onchange = handleNtCheckboxChange; // Mantiene el guardado en la DB
+            });
+            card.querySelectorAll('.nt-number-input').forEach(i => {
+                i.oninput = () => validateNtForm(i.dataset.requestId); // Para validación visual
+                i.onchange = handleNtNumberInput; // Para guardar en la DB al perder foco
+            });
             card.querySelectorAll('.admin-qty-input').forEach(i => i.onchange = handleAdminQuantityChange);
             card.querySelectorAll('.reception-qty-input').forEach(i => i.onchange = () => {});
             card.querySelectorAll('.nt-number-input').forEach(i => i.oninput = handleNtNumberInput);
@@ -430,89 +437,84 @@
             
             return card;
         }
-
         async function handleAdminAction(event) {
-            const button = event.currentTarget;
-            const { requestId, action } = button.dataset;
-            const reqRef = transfersCollection.doc(requestId);
-            let updateData = {};
+    const button = event.currentTarget;
+    const { requestId, action } = button.dataset;
+    const reqRef = transfersCollection.doc(requestId);
+    let updateData = {};
 
-            const actions = {
-                start_processing: async () => {
-                    const doc = await reqRef.get();
-                    if(doc.exists) {
-                        const itemsToProcess = doc.data().items.map(item => ({ ...item, sentQuantity: item.quantity, nt_checked: false }));
-                        updateData = { status: 'processing_partial_items', items: itemsToProcess };
-                        expandedRequestsState.add(requestId);
-                    }
-                },
-                save_admin_note: async () => {
-                    await reqRef.update({ adminNotes: document.getElementById(`adminNotes-${requestId}`).value });
-                    alert('Nota guardada');
-                },
-                finalize_processing: () => {
-                    if (confirm("¿Finalizar revisión?")) updateData = { status: 'pending_nt_start' };
-                },
-                start_nt_preparation: () => {
-                    updateData = { status: 'pending_nt_active' };
-                    expandedRequestsState.add(requestId);
-                },
-                return_to_pending: async () => {
-                    if (confirm("¿Devolver a revisión? Se borrarán los datos de los pasos posteriores.")) {
-                        const docToReset = await reqRef.get();
-                        if (docToReset.exists) {
-                            const resetItems = docToReset.data().items.map(({ productId, productName, quantity }) => ({ productId, productName, quantity }));
-                            updateData = { status: 'pending', items: resetItems, adminNotes: firebase.firestore.FieldValue.delete(), ntNumber: firebase.firestore.FieldValue.delete(), shippingNotes: firebase.firestore.FieldValue.delete(), shippingInfo: firebase.firestore.FieldValue.delete(), reception: firebase.firestore.FieldValue.delete(), novelty: firebase.firestore.FieldValue.delete() };
-                            expandedRequestsState.delete(requestId);
-                        }
-                    }
-                },
-                ready_to_ship: () => {
-                    if (confirm("¿Marcar como listo para enviar?")) updateData = { status: 'ready_to_ship' };
-                },
-                save_shipping_note: async () => {
-                    await reqRef.update({ shippingNotes: document.getElementById(`shippingNotes-${requestId}`).value });
-                    alert('Nota de envío guardada');
-                },
-                proceed_to_shipping: () => {
-                    updateData = { status: 'shipping_details' };
-                },
-                finalize_shipment: () => {
-                    const hasTracking = document.querySelector(`input[name="hasTracking-${requestId}"]:checked`).value === 'yes';
-                    const trackingNumber = hasTracking ? document.getElementById(`trackingNumber-${requestId}`).value : null;
-                    if (hasTracking && !trackingNumber) {
-                        alert("Por favor, ingresa el número de guía.");
-                        return 'stop';
-                    }
-                    updateData = { status: 'shipped', shippingInfo: { hasTracking, trackingNumber } };
-                },
-                start_novelty_review: () => {
-                    updateData = { status: 'novelty_review' };
-                    expandedRequestsState.add(requestId);
-                },
-                finalize_novelty: () => {
-                    const reasonSelect = document.getElementById(`noveltyReason-${requestId}`);
-                    let reason = reasonSelect.value === 'Otro' ? document.getElementById(`noveltyOtherReason-${requestId}`).value.trim() : reasonSelect.value;
-                    const solution = document.getElementById(`noveltySolution-${requestId}`).value.trim();
-                    updateData = { status: 'completed', novelty: { reason, solution, resolvedBy: currentUserData.user.email, timestamp: firebase.firestore.FieldValue.serverTimestamp() } };
-                    expandedRequestsState.delete(requestId);
-                },
-                finalize_reception: () => { handleFinalizeReception(event); return 'stop'; },
-                delete_my_request: () => { handleDeleteMyRequest(event); return 'stop'; },
-                edit_my_request: () => { handleStartEdit(event); return 'stop'; },
-                cancel: () => {
-                    if (confirm("¿Cancelar solicitud?")) updateData = { status: 'cancelled' };
-                }
-            };
-            
-            const result = await actions[action]?.();
-            if (result === 'stop') return;
-
-            if (Object.keys(updateData).length > 0) {
-                await reqRef.update(updateData);
+    const actions = {
+        start_processing: async () => {
+            const doc = await reqRef.get();
+            if(doc.exists) {
+                const itemsToProcess = doc.data().items.map(item => ({ ...item, sentQuantity: item.quantity, nt_checked: false }));
+                updateData = { status: 'processing_partial_items', items: itemsToProcess };
+                // NO se expande automáticamente
             }
+        },
+        save_admin_note: async () => {
+            await reqRef.update({ adminNotes: document.getElementById(`adminNotes-${requestId}`).value });
+            alert('Nota guardada');
+        },
+        finalize_processing: () => {
+            if (confirm("¿Finalizar revisión?")) updateData = { status: 'pending_nt_start' };
+        },
+        start_nt_preparation: () => {
+            updateData = { status: 'pending_nt_active' };
+        },
+        return_to_pending: async () => {
+            if (confirm("¿Devolver a revisión? Se borrarán los datos de los pasos posteriores.")) {
+                const docToReset = await reqRef.get();
+                if (docToReset.exists) {
+                    const resetItems = docToReset.data().items.map(({ productId, productName, quantity }) => ({ productId, productName, quantity }));
+                    updateData = { status: 'pending', items: resetItems, adminNotes: firebase.firestore.FieldValue.delete(), ntNumber: firebase.firestore.FieldValue.delete(), shippingNotes: firebase.firestore.FieldValue.delete(), shippingInfo: firebase.firestore.FieldValue.delete(), reception: firebase.firestore.FieldValue.delete(), novelty: firebase.firestore.FieldValue.delete() };
+                }
+            }
+        },
+        ready_to_ship: () => {
+            if (confirm("¿Marcar como listo para enviar?")) updateData = { status: 'ready_to_ship' };
+        },
+        save_shipping_note: async () => {
+            await reqRef.update({ shippingNotes: document.getElementById(`shippingNotes-${requestId}`).value });
+            alert('Nota de envío guardada');
+        },
+        proceed_to_shipping: () => {
+            updateData = { status: 'shipping_details' };
+        },
+        finalize_shipment: () => {
+            const hasTracking = document.querySelector(`input[name="hasTracking-${requestId}"]:checked`).value === 'yes';
+            const trackingNumber = hasTracking ? document.getElementById(`trackingNumber-${requestId}`).value : null;
+            if (hasTracking && !trackingNumber) {
+                alert("Por favor, ingresa el número de guía.");
+                return 'stop';
+            }
+            updateData = { status: 'shipped', shippingInfo: { hasTracking, trackingNumber } };
+        },
+        start_novelty_review: () => {
+            updateData = { status: 'novelty_review' };
+            // NO se expande automáticamente
+        },
+        finalize_novelty: () => {
+            const reasonSelect = document.getElementById(`noveltyReason-${requestId}`);
+            let reason = reasonSelect.value === 'Otro' ? document.getElementById(`noveltyOtherReason-${requestId}`).value.trim() : reasonSelect.value;
+            const solution = document.getElementById(`noveltySolution-${requestId}`).value.trim();
+            updateData = { status: 'completed', novelty: { reason, solution, resolvedBy: currentUserData.user.email, timestamp: firebase.firestore.FieldValue.serverTimestamp() } };
+        },
+        finalize_reception: () => { handleFinalizeReception(event); return 'stop'; },
+        delete_my_request: () => { handleDeleteMyRequest(event); return 'stop'; },
+        edit_my_request: () => { handleStartEdit(event); return 'stop'; },
+        cancel: () => {
+            if (confirm("¿Cancelar solicitud?")) updateData = { status: 'cancelled' };
         }
-        
+    };
+    
+    const result = await actions[action]?.();
+    if (result === 'stop') return;
+
+    if (Object.keys(updateData).length > 0) {
+        await reqRef.update(updateData);
+    }
+}
         function handleToggleDetails(evento) {
             const requestId = evento.currentTarget.dataset.requestId;
             expandedRequestsState.has(requestId) ? expandedRequestsState.delete(requestId) : expandedRequestsState.add(requestId);
@@ -542,12 +544,33 @@
                 await reqRef.update({ items });
             }
         }
-
         async function handleNtNumberInput(event) {
-            const { requestId } = event.currentTarget.dataset;
-            const ntNumber = event.currentTarget.value;
-            await transfersCollection.doc(requestId).update({ ntNumber });
-        }
+    const { requestId } = event.currentTarget.dataset;
+    const ntNumber = event.currentTarget.value;
+    try {
+        await transfersCollection.doc(requestId).update({ ntNumber });
+    } catch (e) {
+        console.error("Error al guardar el número de NT:", e);
+    }
+}
+        function validateNtForm(requestId) {
+    const ntInput = document.getElementById(`ntNumber-${requestId}`);
+    const checkboxes = document.querySelectorAll(`.nt-checkbox[data-request-id="${requestId}"]`);
+    const readyBtn = document.querySelector(`button[data-action="ready_to_ship"][data-request-id="${requestId}"]`);
+
+    if (!ntInput || !readyBtn) return;
+
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    const hasText = ntInput.value.trim() !== '';
+
+    if (allChecked && hasText) {
+        readyBtn.disabled = false;
+        readyBtn.classList.remove('disabled:bg-gray-400');
+    } else {
+        readyBtn.disabled = true;
+        readyBtn.classList.add('disabled:bg-gray-400');
+    }
+}
 
         function handleTrackingOptionChange(event) {
             const requestId = event.currentTarget.name.split('-')[1];
