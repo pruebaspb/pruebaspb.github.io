@@ -140,6 +140,22 @@
             </div>
         </div>
     </div>
+            <!-- VISTA DE REVISOR -->
+        <div id="reviewerView" class="space-y-8" style="display: none;">
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Pendientes de Revisión</h2>
+                <div class="space-y-2 mb-4">
+                    <input type="text" id="reviewerSearchId" placeholder="Buscar por ID o Solicitante..." class="w-full px-3 py-2 border rounded-lg">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" id="reviewerDateFrom" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Desde">
+                        <input type="date" id="reviewerDateTo" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Hasta">
+                    </div>
+                </div>
+                <div class="max-h-[80vh] overflow-y-auto">
+                    <div id="reviewerPendingRequests" class="grid gap-4 mb-6"></div>
+                </div>
+            </div>
+        </div>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- CONFIGURACIÓN DE FIREBASE ---
@@ -162,6 +178,7 @@
         const USER_ROLES = {
             'administrador.pruebas@gmail.com': ['Administrador', 'admin'],
             'pruebaspb@gmail.com': ['Punto de venta Cali centro', 'requester'],
+            'separador.pruebas@gmail.com': ['Usuario Revisor', 'reviewer'],
         };
 
         // --- ESTADO GLOBAL DE LA APLICACIÓN ---
@@ -193,7 +210,12 @@
             productFile: document.getElementById('productFile'), uploadProductsBtn: document.getElementById('uploadProductsBtn'),
             uploadStatus: document.getElementById('uploadStatus'), fileNameDisplay: document.getElementById('fileNameDisplay'),
             userEmailDisplay: document.getElementById('userEmailDisplay'), logoutBtn: document.getElementById('logoutBtn'),
-            userInfo: document.getElementById('userInfo')
+            userInfo: document.getElementById('userInfo'),
+            reviewerView: document.getElementById('reviewerView'),
+            reviewerPendingRequests: document.getElementById('reviewerPendingRequests'),
+            reviewerSearchId: document.getElementById('reviewerSearchId'),
+            reviewerDateFrom: document.getElementById('reviewerDateFrom'),
+            reviewerDateTo: document.getElementById('reviewerDateTo')
         };
 
         // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
@@ -234,23 +256,33 @@
         });
 
         dom.logoutBtn.onclick = () => auth.signOut();
-        
-        function setupUIForUser() {
-            if (!currentUserData) return;
-            const { name, role } = currentUserData;
-            if (role === 'admin') {
-                dom.requesterView.style.display = 'none';
-                dom.adminView.style.display = 'grid';
-                dom.productManagementCard.style.display = 'block';
-            } else {
-                dom.requesterView.style.display = 'grid';
-                dom.adminView.style.display = 'none';
-                dom.requesterName.innerHTML = `<option value="${currentUserData.name}">${currentUserData.name}</option>`;
-                dom.requesterName.value = currentUserData.name;
-            }
+            function setupUIForUser() {
+        if (!currentUserData) return;
+        const { name, role } = currentUserData;
+
+        // Ocultar todas las vistas primero
+        dom.requesterView.style.display = 'none';
+        dom.adminView.style.display = 'none';
+        dom.reviewerView.style.display = 'none';
+
+        if (role === 'admin') {
+            dom.adminView.style.display = 'block'; // Usar block por el layout space-y
+            dom.productManagementCard.style.display = 'block';
+        } else if (role === 'reviewer') { // <-- AÑADIR ESTE BLOQUE COMPLETO
+            const pendingForReview = applyFilters(
+                sortedRequests.filter(r => ['pending', 'processing_partial_items'].includes(r.status)), 
+                dom.reviewerSearchId, 
+                dom.reviewerDateFrom, 
+                dom.reviewerDateTo
+            );
+            renderSection('reviewerPendingRequests', dom.reviewerPendingRequests, pendingForReview, 'admin', "No hay solicitudes pendientes de revisión.");
+        } else { // El 'else' original del admin
+            const pendingForReview = applyFilters(sortedRequests.filter(r => ['pending', 'processing_partial_items'].includes(r.status)), dom.adminActiveSearchId, dom.adminActiveDateFrom, dom.adminActiveDateTo);
+            dom.requesterView.style.display = 'grid';
+            dom.requesterName.innerHTML = `<option value="${currentUserData.name}">${currentUserData.name}</option>`;
+            dom.requesterName.value = currentUserData.name;
         }
-        
-        // ... (EL RESTO DEL SCRIPT NO NECESITA CAMBIOS) ...
+    }
         function applyFilters(requests, searchInput, dateFromInput, dateToInput) {
              const searchTerm = searchInput.value.toLowerCase().trim();
              const dateFrom = dateFromInput.value;
@@ -875,7 +907,7 @@
             dom.searchInput.oninput = () => renderProducts(allProducts.filter(p => p.name.toLowerCase().includes(dom.searchInput.value.toLowerCase())));
             dom.productFile.onchange = () => { dom.fileNameDisplay.textContent = dom.productFile.files.length > 0 ? dom.productFile.files[0].name : 'Ningún archivo seleccionado.'; dom.uploadStatus.textContent = ''; };
             
-            ['requesterSearchId', 'requesterDateFrom', 'requesterDateTo', 'adminActiveSearchId', 'adminActiveDateFrom', 'adminActiveDateTo', 'adminHistorySearchId', 'adminHistoryDateFrom', 'adminHistoryDateTo'].forEach(id => {
+            ['requesterSearchId', 'requesterDateFrom', 'requesterDateTo', 'adminActiveSearchId', 'adminActiveDateFrom', 'adminActiveDateTo', 'adminHistorySearchId', 'adminHistoryDateFrom', 'adminHistoryDateTo', 'reviewerSearchId', 'reviewerDateFrom', 'reviewerDateTo'].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
                     element.addEventListener('input', renderAllSections);
