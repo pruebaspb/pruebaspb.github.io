@@ -369,7 +369,7 @@
             const hasNtNumber = req.status === 'pending_nt_active' && req.ntNumber && req.ntNumber.trim() !== '';
             const canProceedFromNt = allNtItemsChecked && hasNtNumber;
 
-            const itemsHtml = hasItems ? (req.items || []).map((item, index) => {
+                        const itemsHtml = hasItems ? (req.items || []).map((item, index) => {
                 let quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
                 if (item.sentQuantity !== undefined) quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`;
                 if (item.receivedQuantity !== undefined) {
@@ -377,28 +377,51 @@
                     quantityDisplay += ` | Recibido: <b class="${color}">${item.receivedQuantity}</b>`;
                 }
                 const receptionInput = (role === 'requester' && req.status === 'shipped') ? `<div class="flex items-center"><label class="text-xs mr-2">Recibido:</label><input type="number" value="${item.sentQuantity}" data-request-id="${req.id}" data-item-index="${index}" class="reception-qty-input w-16 p-1 border rounded-md text-center text-sm"></div>` : '';
-                const adminInput = (role === 'admin' && req.status === 'processing_partial_items') ? `<input type="number" value="${item.sentQuantity ?? item.quantity}" data-request-id="${req.id}" data-item-index="${index}" class="admin-qty-input w-20 p-1 border rounded-md text-center">` : ``;
-                const itemCheckedHtml = (role === 'admin' && req.status === 'pending_nt_active') ? `<input type="checkbox" ${item.nt_checked ? 'checked' : ''} data-request-id="${req.id}" data-item-index="${index}" class="nt-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer">` : '';
-                const itemBgColor = (role === 'admin' && req.status === 'pending_nt_active') ? (item.nt_checked ? 'bg-green-100' : 'bg-red-100') : 'bg-white';
                 
-                return `<li class="p-2 rounded-md border ${itemBgColor} flex justify-between items-center text-sm"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">${quantityDisplay}</div></div><div class="flex items-center gap-2">${receptionInput}${adminInput}${itemCheckedHtml}</div></li>`;
+                // Lógica para los inputs y checkboxes del admin
+                let adminControls = '';
+                let itemBgColor = 'bg-white';
+                if (role === 'admin') {
+                    if (req.status === 'processing_partial_items') {
+                        adminControls += `<input type="number" value="${item.sentQuantity ?? item.quantity}" data-request-id="${req.id}" data-item-index="${index}" class="admin-qty-input w-20 p-1 border rounded-md text-center">`;
+                        // AÑADIMOS EL CHECKBOX AQUÍ TAMBIÉN
+                        adminControls += `<input type="checkbox" ${item.nt_checked ? 'checked' : ''} data-request-id="${req.id}" data-item-index="${index}" class="nt-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer">`;
+                        itemBgColor = item.nt_checked ? 'bg-green-100' : 'bg-red-100'; // Aplicamos color
+                    } else if (req.status === 'pending_nt_active') {
+                        // Mantenemos la lógica existente para 'pending_nt_active'
+                        adminControls += `<input type="checkbox" ${item.nt_checked ? 'checked' : ''} data-request-id="${req.id}" data-item-index="${index}" class="nt-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer">`;
+                        itemBgColor = item.nt_checked ? 'bg-green-100' : 'bg-red-100';
+                    }
+                }
+                
+                return `<li class="p-2 rounded-md border ${itemBgColor} flex justify-between items-center text-sm"><div><span class="font-medium text-gray-800">${item.productName}</span><div class="text-xs text-gray-600">${quantityDisplay}</div></div><div class="flex items-center gap-2">${receptionInput}${adminControls}</div></li>`;
             }).join('') : '<p class="text-sm text-gray-500 italic">No hay artículos.</p>';
 
             let contentHtml = '';
             if (role === 'admin') {
+                // Contenedor para los botones de acción
+                let actionButtonsHtml = '';
+
                 if (req.status === 'pending') {
-                    contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_processing" class="action-btn w-full bg-gray-800 hover:bg-black text-white font-bold py-2 px-3 rounded-md">Iniciar Revisión</button></div>`;
+                    actionButtonsHtml += `<button data-request-id="${req.id}" data-action="start_processing" class="action-btn w-full bg-gray-800 hover:bg-black text-white font-bold py-2 px-3 rounded-md">Iniciar Revisión</button>`;
                 }
                 if (req.status.startsWith('processing')) {
                     contentHtml += `<div class="mt-4"><label for="adminNotes-${req.id}" class="text-sm font-medium">Nota de Revisión:</label><textarea id="adminNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.adminNotes || ''}</textarea><button data-request-id="${req.id}" data-action="save_admin_note" class="action-btn mt-1 text-xs bg-gray-700 px-3 py-1.5 rounded-md text-white">Guardar Nota</button></div>`;
-                    contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="finalize_processing" class="action-btn w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-3 rounded-md">Finalizar Revisión</button></div>`;
+                    actionButtonsHtml += `<button data-request-id="${req.id}" data-action="finalize_processing" class="action-btn bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-3 rounded-md">Finalizar Revisión</button>`;
                 }
                 if (req.status === 'pending_nt_start') {
-                    contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_nt_preparation" class="action-btn w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-3 rounded-md">Iniciar Preparación NT</button></div>`;
+                    actionButtonsHtml += `<button data-request-id="${req.id}" data-action="start_nt_preparation" class="action-btn bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-3 rounded-md">Iniciar Preparación NT</button>`;
                 }
                 if (req.status === 'pending_nt_active') {
                     contentHtml += `<div class="mt-4 space-y-2"><label for="ntNumber-${req.id}" class="text-sm font-medium">Nº Nota de Traslado (Obligatorio):</label><input type="text" id="ntNumber-${req.id}" data-request-id="${req.id}" value="${req.ntNumber || ''}" class="nt-number-input w-full mt-1 border rounded-md p-2"></div>`;
-                    contentHtml += `<div class="mt-4 flex justify-end gap-2"><button data-request-id="${req.id}" data-action="return_to_pending" class="action-btn bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Devolver</button><button data-request-id="${req.id}" data-action="ready_to_ship" class="action-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-md disabled:bg-gray-400" ${!canProceedFromNt ? 'disabled' : ''}>Listo para Enviar</button></div>`;
+                    actionButtonsHtml += `<button data-request-id="${req.id}" data-action="return_to_pending" class="action-btn bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold py-2 px-3 rounded-md">Devolver</button>`;
+                    actionButtonsHtml += `<button data-request-id="${req.id}" data-action="ready_to_ship" class="action-btn bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-md disabled:bg-gray-400" ${!canProceedFromNt ? 'disabled' : ''}>Listo para Enviar</button>`;
+                }
+                if (['pending', 'processing_partial_items', 'pending_nt_start', 'pending_nt_active'].includes(req.status)) {
+                    actionButtonsHtml += `<button data-request-id="${req.id}" data-action="cancel" class="action-btn bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-3 rounded-md">Cancelar</button>`;
+                }
+                if (actionButtonsHtml) {
+                    contentHtml += `<div class="mt-4 border-t pt-4 flex justify-end gap-2 flex-wrap">${actionButtonsHtml}</div>`;
                 }
                 if (req.status === 'ready_to_ship') {
                     contentHtml += `<div class="mt-4 space-y-2"><label for="shippingNotes-${req.id}" class="text-sm font-medium">Obs. de Envío (Opcional):</label><textarea id="shippingNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.shippingNotes || ''}</textarea><button data-request-id="${req.id}" data-action="save_shipping_note" class="action-btn mt-1 text-xs bg-gray-700 px-3 py-1.5 rounded-md text-white">Guardar Nota</button></div>`;
