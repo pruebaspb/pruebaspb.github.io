@@ -52,10 +52,13 @@
             <button type="submit" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg">ENVIAR SOLICITUD DE TRASLADO</button>
         </form>
     </div>
-
-    <!-- COLUMNA DERECHA (Con el método STICKY, igual que el admin) -->
-    <div class="lg:col-span-1">
-        <div class="sticky top-8 bg-white p-6 rounded-xl shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto">
+    <!-- COLUMNA DERECHA DEL SOLICITANTE (CON SCROLL SOLO EN LAS LISTAS) -->
+<div class="lg:col-span-1">
+    <!-- Contenedor principal de la tarjeta -->
+    <div class="bg-white p-6 rounded-xl shadow-lg flex flex-col max-h-[88vh]">
+        
+        <!-- 1. Contenido Fijo (Título y Filtros) -->
+        <div class="flex-shrink-0">
             <h3 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Mis solicitudes</h3>
             <div class="space-y-2 mb-4">
                 <input type="text" id="requesterSearchId" placeholder="Buscar por ID..." class="w-full px-3 py-2 border rounded-lg">
@@ -64,7 +67,10 @@
                     <input type="date" id="requesterDateTo" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Hasta">
                 </div>
             </div>
-            
+        </div>
+
+        <!-- 2. Contenido con Scroll -->
+        <div class="flex-grow overflow-y-auto">
             <h4 class="text-xl font-bold text-yellow-600 mb-2">Por Recibir</h4>
             <div id="myShippedRequests" class="grid gap-4 mb-6 border-b pb-6"></div>
 
