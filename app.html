@@ -492,7 +492,7 @@
 
             const infoBoxesHtml = `
                 <div class="space-y-1 mt-2">
-                    ${req.requesterNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Obs. Solicitante:</p><p class="italic text-gray-800">"${req.requesterNotes}"</p></div>` : ''}
+                    ${req.requesterNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Nota Solicitante:</p><p class="italic text-gray-800">"${req.requesterNotes}"</p></div>` : ''}
                     ${req.adminNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Nota Admin (Revisión):</p><p class="italic text-gray-800">"${req.adminNotes}"</p></div>` : ''}
                     ${req.ntNumber ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Nº Nota de Traslado:</p><p class="font-bold text-gray-900">${req.ntNumber}</p></div>` : ''}
                     ${req.shippingNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Obs. de Envío:</p><p class="italic text-gray-800">"${req.shippingNotes}"</p></div>` : ''}
@@ -507,7 +507,7 @@
                         <h4 class="font-semibold text-lg">${req.requesterName}</h4>
                         <p class="text-sm text-gray-600">Para: <strong>${req.toWarehouse}</strong></p>
                         <p class="text-xs text-gray-400">ID: ${req.id} | Creada: ${creationDate}</p>
-                        <p class="text-sm mt-1">Fecha Requerida: <b>${reqDate}</b></p>
+                        <p class="text-sm mt-1">Fecha: <b>${reqDate}</b></p>
                         <span class="inline-block mt-2 px-2 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-800">${translateStatus(req.status, req)}</span>
                     </div>
                     ${requesterButtons}
@@ -975,12 +975,12 @@
                             'Solicitante': req.requesterName, 'Bodega Destino': req.toWarehouse, 
                             'ID Producto': item.productId, 'Nombre Producto': item.productName, 
                             'U. Solicitadas': item.quantity, 'U. Enviadas': item.sentQuantity, 'U. Recibidas': item.receivedQuantity, 
-                            'Obs. Solicitante': req.requesterNotes || '', 'Obs. Admin': req.adminNotes || '', 'Obs. Recepción': req.reception?.notes || '',
+                            'Nota Solicitante': req.requesterNotes || '', 'Obs. Admin': req.adminNotes || '', 'Obs. Recepción': req.reception?.notes || '',
                             'Causa Novedad': req.novelty?.reason || '', 'Solución Novedad': req.novelty?.solution || ''
                         });
                     });
                 } else {
-                    excelData.push({ 'ID Traslado': req.id, 'Estado': translateStatus(req.status, req), 'Fecha Creación': creationDate, 'Solicitante': req.requesterName, 'Bodega Destino': req.toWarehouse, 'ID Producto': 'N/A', 'Nombre Producto': 'Sin items', 'U. Solicitadas': 0, 'U. Enviadas': 0, 'U. Recibidas': 0, 'Obs. Solicitante': req.requesterNotes || '', 'Obs. Admin': req.adminNotes || '', 'Obs. Recepción': req.reception?.notes || '', 'Causa Novedad': '', 'Solución Novedad': '' });
+                    excelData.push({ 'ID Traslado': req.id, 'Estado': translateStatus(req.status, req), 'Fecha Creación': creationDate, 'Solicitante': req.requesterName, 'Bodega Destino': req.toWarehouse, 'ID Producto': 'N/A', 'Nombre Producto': 'Sin items', 'U. Solicitadas': 0, 'U. Enviadas': 0, 'U. Recibidas': 0, 'Nota Solicitante': req.requesterNotes || '', 'Obs. Admin': req.adminNotes || '', 'Obs. Recepción': req.reception?.notes || '', 'Causa Novedad': '', 'Solución Novedad': '' });
                 }
             });
             const worksheet = XLSX.utils.json_to_sheet(excelData);
