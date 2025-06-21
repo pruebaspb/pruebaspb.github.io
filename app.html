@@ -29,6 +29,7 @@
             </div>
         </header>
 
+        <!-- VISTAS ... (Todo el HTML se mantiene igual, lo omito por brevedad) -->
         <!-- VISTA DE SOLICITANTE -->
         <div id="requesterView" class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" style="display: none;">
             <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
@@ -377,7 +378,6 @@
                     quantityDisplay = `Cantidad a Enviar: <b>${item.sentQuantity ?? item.quantity}</b>`;
                 } else {
                     quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
-                    // --- CAMBIO CLAVE: Mostrar "Enviado" incluso si la cantidad es 0 ---
                     if (item.sentQuantity !== undefined) {
                          quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`;
                     }
@@ -618,25 +618,21 @@
         async function handleNtCheckboxChange(event) {
             const { requestId, itemIndex } = event.currentTarget.dataset;
             const isChecked = event.currentTarget.checked;
-            const reqRef = transfersCollection.doc(requestId);
-            const doc = await reqRef.get();
-            if (doc.exists) {
-                let items = doc.data().items;
-                items[itemIndex].nt_checked = isChecked;
-                await reqRef.update({ items });
-            }
+            const updatePath = `items.${itemIndex}.nt_checked`;
+            
+            await transfersCollection.doc(requestId).update({
+                [updatePath]: isChecked
+            });
         }
         
         async function handleAdminQuantityChange(event) {
             const { requestId, itemIndex } = event.currentTarget.dataset;
             const newSentQuantity = parseInt(event.currentTarget.value, 10);
-            const reqRef = transfersCollection.doc(requestId);
-            const doc = await reqRef.get();
-            if (doc.exists) {
-                let items = doc.data().items;
-                items[itemIndex].sentQuantity = newSentQuantity;
-                await reqRef.update({ items });
-            }
+            const updatePath = `items.${itemIndex}.sentQuantity`;
+
+            await transfersCollection.doc(requestId).update({
+                [updatePath]: newSentQuantity
+            });
         }
 
         async function handleNtNumberInput(event) {
@@ -752,6 +748,7 @@
             document.getElementById('deliveryDate').valueAsDate = new Date();
         }
 
+        // --- CAMBIO CLAVE: Corregir la lógica de finalización de recepción ---
         async function handleFinalizeReception(event) {
             const button = event.currentTarget;
             const requestId = button.dataset.requestId;
@@ -764,19 +761,30 @@
             const doc = await reqRef.get();
             if (!doc.exists) return;
             let items = doc.data().items;
-            let isComplete = true;
+            let isComplete = true; // Asumimos que está completo hasta encontrar una discrepancia
             
             qtyInputs.forEach((input) => {
                 const index = parseInt(input.dataset.itemIndex, 10);
                 const receivedQty = parseInt(input.value, 10);
                 if (items[index]) {
                     items[index].receivedQuantity = receivedQty;
-                    if (receivedQty < items[index].sentQuantity) isComplete = false;
+                    // Si lo recibido es DIFERENTE a lo enviado, se marca como incompleto
+                    if (receivedQty !== items[index].sentQuantity) {
+                        isComplete = false;
+                    }
                 }
             });
             
             const newStatus = isComplete ? 'completed' : 'completed_incomplete';
-            await reqRef.update({ status: newStatus, items, reception: { notes: receptionNotes, timestamp: firebase.firestore.FieldValue.serverTimestamp(), finalizedBy: currentUserData.user.email } });
+            await reqRef.update({ 
+                status: newStatus, 
+                items, 
+                reception: { 
+                    notes: receptionNotes, 
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
+                    finalizedBy: currentUserData.user.email 
+                } 
+            });
         }
         
         function generateCustomId() {
