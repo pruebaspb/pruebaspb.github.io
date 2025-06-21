@@ -28,8 +28,7 @@
                 </button>
             </div>
         </header>
-
-        <!-- VISTAS ... (El HTML se mantiene igual, se omite por brevedad) -->
+        
         <!-- VISTA DE SOLICITANTE -->
         <div id="requesterView" class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" style="display: none;">
             <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
@@ -241,7 +240,7 @@
                 if (request && request.items) {
                     const hasShortage = request.items.some(item => item.receivedQuantity < item.sentQuantity);
                     const hasExcess = request.items.some(item => item.receivedQuantity > item.sentQuantity);
-                    if (hasShortage && hasExcess) return 'Discrepancia';
+                    if (hasShortage && hasExcess) return 'inexacto';
                     if (hasShortage) return 'Incompleto';
                     if (hasExcess) return 'Excedente';
                 }
@@ -250,7 +249,7 @@
 
             if (s === 'completed_incomplete') {
                 const discrepancyType = checkDiscrepancy(req);
-                if (discrepancyType === 'Discrepancia') return 'Recibido con Discrepancia (Con Novedad)';
+                if (discrepancyType === 'inexacto') return 'Recibido con inexacto (Con Novedad)';
                 if (discrepancyType === 'Incompleto') return 'Recibido Incompleto (Con Novedad)';
                 if (discrepancyType === 'Excedente') return 'Recibido con Excedente (Con Novedad)';
                 return 'Recibido con Novedad (Con Novedad)';
@@ -258,7 +257,7 @@
 
             if (s === 'completed' && req.novelty) {
                 const discrepancyType = checkDiscrepancy(req);
-                if (discrepancyType === 'Discrepancia') return 'Recibido con Discrepancia (Resuelto)';
+                if (discrepancyType === 'inexacto') return 'Recibido con inexacto (Resuelto)';
                 if (discrepancyType === 'Incompleto') return 'Recibido Incompleto (Resuelto)';
                 if (discrepancyType === 'Excedente') return 'Recibido con Excedente (Resuelto)';
                 return 'Recibido con Novedad (Resuelto)';
