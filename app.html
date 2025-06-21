@@ -366,27 +366,35 @@
 
             const hasItems = req.items && req.items.length > 0;
 
-            // Variables para la lógica de los botones
             const allNtItemsChecked = hasItems && req.status === 'pending_nt_active' && req.items.every(item => item.nt_checked);
             const hasNtNumber = req.status === 'pending_nt_active' && req.ntNumber && req.ntNumber.trim() !== '';
             const canProceedFromNt = allNtItemsChecked && hasNtNumber;
-            
-            // --- CAMBIO 1 (PARTE A): Verificar si todos los items de la revisión están chuleados ---
             const allReviewItemsChecked = hasItems && req.status === 'processing_partial_items' && req.items.every(item => item.nt_checked === true);
 
             const itemsHtml = hasItems ? (req.items || []).map((item, index) => {
-                let quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
-                if (item.sentQuantity !== undefined) quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`;
-                if (item.receivedQuantity !== undefined) {
-                    const color = item.receivedQuantity < item.sentQuantity ? 'text-red-600' : 'text-green-700';
-                    quantityDisplay += ` | Recibido: <b class="${color}">${item.receivedQuantity}</b>`;
+                let quantityDisplay;
+
+                // --- CAMBIO CLAVE: Lógica condicional para la cantidad ---
+                if (req.status === 'pending_nt_active') {
+                    // En la preparación de la NT, solo mostramos la cantidad a enviar para claridad.
+                    quantityDisplay = `Cantidad a Enviar: <b>${item.sentQuantity ?? item.quantity}</b>`;
+                } else {
+                    // Comportamiento normal para todos los demás estados
+                    quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
+                    if (item.sentQuantity !== undefined && item.sentQuantity > 0) {
+                         quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`;
+                    }
+                    if (item.receivedQuantity !== undefined) {
+                        const color = item.receivedQuantity < item.sentQuantity ? 'text-red-600' : 'text-green-700';
+                        quantityDisplay += ` | Recibido: <b class="${color}">${item.receivedQuantity}</b>`;
+                    }
                 }
+
                 const receptionInput = (role === 'requester' && req.status === 'shipped') ? `<div class="flex items-center"><label class="text-xs mr-2">Recibido:</label><input type="number" value="${item.sentQuantity}" data-request-id="${req.id}" data-item-index="${index}" class="reception-qty-input w-16 p-1 border rounded-md text-center text-sm"></div>` : '';
                 
-                // Lógica para los inputs y checkboxes del admin
                 let adminControls = '';
                 let itemBgColor = 'bg-white';
-                if (role === 'admin' || role === 'reviewer') { // Ampliado para incluir al revisor
+                if (role === 'admin' || role === 'reviewer') {
                     if (req.status === 'processing_partial_items') {
                         adminControls += `<input type="number" value="${item.sentQuantity ?? item.quantity}" data-request-id="${req.id}" data-item-index="${index}" class="admin-qty-input w-20 p-1 border rounded-md text-center">`;
                         adminControls += `<input type="checkbox" ${item.nt_checked ? 'checked' : ''} data-request-id="${req.id}" data-item-index="${index}" class="nt-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer">`;
@@ -409,10 +417,9 @@
                 }
                 if (req.status.startsWith('processing')) {
                     contentHtml += `<div class="mt-4"><label for="adminNotes-${req.id}" class="text-sm font-medium">Nota de Revisión:</label><textarea id="adminNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.adminNotes || ''}</textarea><button data-request-id="${req.id}" data-action="save_admin_note" class="action-btn mt-1 text-xs bg-gray-700 px-3 py-1.5 rounded-md text-white">Guardar Nota</button></div>`;
-                    // --- CAMBIO 1 (PARTE B): Añadir `disabled` y clases condicionales al botón ---
                     actionButtonsHtml += `<button data-request-id="${req.id}" data-action="finalize_processing" class="action-btn bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-3 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" ${!allReviewItemsChecked ? 'disabled' : ''}>Finalizar Revisión</button>`;
                 }
-                if (role === 'admin') { // Solo el admin puede gestionar la NT y envíos
+                if (role === 'admin') {
                     if (req.status === 'pending_nt_start') {
                         actionButtonsHtml += `<button data-request-id="${req.id}" data-action="start_nt_preparation" class="action-btn bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-3 rounded-md">Iniciar Preparación NT</button>`;
                     }
@@ -426,7 +433,7 @@
                     }
                     if (actionButtonsHtml) {
                         contentHtml += `<div class="mt-4 border-t pt-4 flex justify-end gap-2 flex-wrap">${actionButtonsHtml}</div>`;
-                        actionButtonsHtml = ''; // Reset para que no se duplique
+                        actionButtonsHtml = ''; 
                     }
                     if (req.status === 'ready_to_ship') {
                         contentHtml += `<div class="mt-4 space-y-2"><label for="shippingNotes-${req.id}" class="text-sm font-medium">Obs. de Envío (Opcional):</label><textarea id="shippingNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.shippingNotes || ''}</textarea><button data-request-id="${req.id}" data-action="save_shipping_note" class="action-btn mt-1 text-xs bg-gray-700 px-3 py-1.5 rounded-md text-white">Guardar Nota</button></div>`;
@@ -442,7 +449,7 @@
                     if (req.status === 'novelty_review' && role === 'admin') {
                         contentHtml += `<div id="noveltyForm-${req.id}" class="mt-4 p-4 bg-gray-100 border-t-2 space-y-4"><h5 class="font-bold text-lg">Gestionar Novedad</h5><div><label class="block text-sm font-medium">Causa:</label><select id="noveltyReason-${req.id}" data-request-id="${req.id}" class="novelty-input mt-1 block w-full p-2 border rounded-md"><option value="" selected disabled>-- Seleccione --</option><option value="Error de empaque">Error de empaque</option><option value="Perdida en transporte">Pérdida en transporte</option><option value="Otro">Otro</option></select></div><div id="noveltyOtherDiv-${req.id}" class="hidden"><label for="noveltyOtherReason-${req.id}" class="block text-sm font-medium">Especifique:</label><input type="text" id="noveltyOtherReason-${req.id}" data-request-id="${req.id}" class="novelty-input mt-1 block w-full p-2 border rounded-md"></div><div><label for="noveltySolution-${req.id}" class="block text-sm font-medium">Solución:</label><textarea id="noveltySolution-${req.id}" data-request-id="${req.id}" rows="3" class="novelty-input mt-1 block w-full p-2 border rounded-md"></textarea></div><button data-request-id="${req.id}" data-action="finalize_novelty" class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md disabled:bg-gray-400" disabled>Finalizar Novedad</button></div>`;
                     }
-                } else if (actionButtonsHtml) { // Para el rol 'reviewer'
+                } else if (actionButtonsHtml) {
                      contentHtml += `<div class="mt-4 border-t pt-4 flex justify-end gap-2 flex-wrap">${actionButtonsHtml}</div>`;
                 }
             }
@@ -493,7 +500,6 @@
             
             card.querySelectorAll('.nt-checkbox').forEach(c => {
                 c.oninput = () => {
-                    // Validar dinámicamente según el estado actual para no mezclar lógicas
                     if (allTransferRequests.find(r => r.id === c.dataset.requestId)?.status === 'pending_nt_active') {
                         validateNtForm(c.dataset.requestId);
                     }
@@ -533,18 +539,15 @@
                 finalize_processing: () => {
                     if (confirm("¿Finalizar revisión?")) updateData = { status: 'pending_nt_start' };
                 },
-                // --- CAMBIO 2: Modificar esta acción para reiniciar los checkboxes ---
                 start_nt_preparation: async () => {
                     const doc = await reqRef.get();
                     if (doc.exists) {
-                        // Reiniciamos 'nt_checked' a 'false' para todos los ítems para el nuevo paso
                         const itemsForNt = doc.data().items.map(item => ({ ...item, nt_checked: false }));
                         updateData = { 
                             status: 'pending_nt_active',
                             items: itemsForNt
                         };
                     } else {
-                        // Fallback por si no se encuentra el documento
                         updateData = { status: 'pending_nt_active' };
                     }
                 },
@@ -616,7 +619,6 @@
                 let items = doc.data().items;
                 items[itemIndex].nt_checked = isChecked;
                 await reqRef.update({ items });
-                // No es necesario llamar a renderAllSections manualmente, onSnapshot lo hará.
             }
         }
         
