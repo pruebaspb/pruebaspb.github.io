@@ -373,13 +373,9 @@
 
             const itemsHtml = hasItems ? (req.items || []).map((item, index) => {
                 let quantityDisplay;
-
-                // --- CAMBIO CLAVE: Lógica condicional para la cantidad ---
                 if (req.status === 'pending_nt_active') {
-                    // En la preparación de la NT, solo mostramos la cantidad a enviar para claridad.
                     quantityDisplay = `Cantidad a Enviar: <b>${item.sentQuantity ?? item.quantity}</b>`;
                 } else {
-                    // Comportamiento normal para todos los demás estados
                     quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
                     if (item.sentQuantity !== undefined && item.sentQuantity > 0) {
                          quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`;
@@ -461,6 +457,15 @@
             const reqDate = req.deliveryDate ? new Date(req.deliveryDate + 'T00:00:00').toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No especificada';
             const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '';
             
+            // --- CAMBIO 1: Unificar la lógica del botón de cancelar/eliminar ---
+            // Ahora el solicitante también usa "cancel" en lugar de "delete_my_request"
+            const requesterButtons = (role === 'requester' && req.status === 'pending') 
+                ? `<div class="flex flex-col gap-1">
+                       <button data-request-id="${req.id}" data-action="edit_my_request" class="action-btn bg-blue-600 text-white text-xs px-2 py-1 rounded-md">Editar</button>
+                       <button data-request-id="${req.id}" data-action="cancel" class="action-btn bg-red-600 text-white text-xs px-2 py-1 rounded-md">Cancelar</button>
+                   </div>` 
+                : '';
+
             const infoBoxesHtml = `
                 <div class="space-y-1 mt-2">
                     ${req.requesterNotes ? `<div class="p-2 bg-white rounded-md border text-xs"><p class="font-semibold text-gray-700">Obs. Solicitante:</p><p class="italic text-gray-800">"${req.requesterNotes}"</p></div>` : ''}
@@ -481,7 +486,7 @@
                         <p class="text-sm mt-1">Fecha Requerida: <b>${reqDate}</b></p>
                         <span class="inline-block mt-2 px-2 py-1 text-xs font-bold rounded-full bg-gray-200 text-gray-800">${translateStatus(req.status, req)}</span>
                     </div>
-                    ${(role === 'requester' && req.status === 'pending') ? `<div class="flex flex-col gap-1"><button data-request-id="${req.id}" data-action="edit_my_request" class="action-btn bg-blue-600 text-white text-xs px-2 py-1 rounded-md">Editar</button><button data-request-id="${req.id}" data-action="delete_my_request" class="action-btn bg-red-600 text-white text-xs px-2 py-1 rounded-md">Eliminar</button></div>` : ''}
+                    ${requesterButtons}
                 </div>
                 <div id="details-${req.id}" class="flex-grow ${isExpanded ? '' : 'hidden'} mt-4 pt-4 border-t">
                     ${infoBoxesHtml}
@@ -589,10 +594,12 @@
                     updateData = { status: 'completed', novelty: { reason, solution, resolvedBy: currentUserData.user.email, timestamp: firebase.firestore.FieldValue.serverTimestamp() } };
                 },
                 finalize_reception: () => { handleFinalizeReception(event); return 'stop'; },
-                delete_my_request: () => { handleDeleteMyRequest(event); return 'stop'; },
                 edit_my_request: () => { handleStartEdit(event); return 'stop'; },
+                // --- CAMBIO 2: La acción "cancel" ahora es usada por ambos roles (admin y solicitante)
                 cancel: () => {
-                    if (confirm("¿Cancelar solicitud?")) updateData = { status: 'cancelled' };
+                    if (confirm("¿Está seguro de que desea cancelar esta solicitud?")) {
+                        updateData = { status: 'cancelled' };
+                    }
                 }
             };
             
@@ -677,12 +684,8 @@
             finalizeBtn.classList.toggle('disabled:bg-gray-400', !(isReasonValid && isSolutionValid));
         }
 
-        async function handleDeleteMyRequest(event) {
-             const requestId = event.currentTarget.dataset.requestId;
-             if (confirm("¿Eliminar esta solicitud?")) {
-                 await transfersCollection.doc(requestId).delete();
-             }
-        }
+        // --- CAMBIO 3: Eliminar esta función, ya no es necesaria ---
+        // async function handleDeleteMyRequest(event) { ... }
 
         function handleAddToTransfer(event) {
             const product = allProducts.find(p => p.id === event.currentTarget.dataset.productId);
