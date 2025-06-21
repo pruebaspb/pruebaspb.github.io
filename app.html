@@ -377,7 +377,8 @@
                     quantityDisplay = `Cantidad a Enviar: <b>${item.sentQuantity ?? item.quantity}</b>`;
                 } else {
                     quantityDisplay = `Solicitado: <b>${item.quantity}</b>`;
-                    if (item.sentQuantity !== undefined && item.sentQuantity > 0) {
+                    // --- CAMBIO CLAVE: Mostrar "Enviado" incluso si la cantidad es 0 ---
+                    if (item.sentQuantity !== undefined) {
                          quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`;
                     }
                     if (item.receivedQuantity !== undefined) {
@@ -457,8 +458,6 @@
             const reqDate = req.deliveryDate ? new Date(req.deliveryDate + 'T00:00:00').toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }) : 'No especificada';
             const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '';
             
-            // --- CAMBIO 1: Unificar la lógica del botón de cancelar/eliminar ---
-            // Ahora el solicitante también usa "cancel" en lugar de "delete_my_request"
             const requesterButtons = (role === 'requester' && req.status === 'pending') 
                 ? `<div class="flex flex-col gap-1">
                        <button data-request-id="${req.id}" data-action="edit_my_request" class="action-btn bg-blue-600 text-white text-xs px-2 py-1 rounded-md">Editar</button>
@@ -595,7 +594,6 @@
                 },
                 finalize_reception: () => { handleFinalizeReception(event); return 'stop'; },
                 edit_my_request: () => { handleStartEdit(event); return 'stop'; },
-                // --- CAMBIO 2: La acción "cancel" ahora es usada por ambos roles (admin y solicitante)
                 cancel: () => {
                     if (confirm("¿Está seguro de que desea cancelar esta solicitud?")) {
                         updateData = { status: 'cancelled' };
@@ -683,9 +681,6 @@
             finalizeBtn.disabled = !(isReasonValid && isSolutionValid);
             finalizeBtn.classList.toggle('disabled:bg-gray-400', !(isReasonValid && isSolutionValid));
         }
-
-        // --- CAMBIO 3: Eliminar esta función, ya no es necesaria ---
-        // async function handleDeleteMyRequest(event) { ... }
 
         function handleAddToTransfer(event) {
             const product = allProducts.find(p => p.id === event.currentTarget.dataset.productId);
