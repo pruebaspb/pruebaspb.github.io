@@ -29,7 +29,7 @@
             </div>
         </header>
 
-        <!-- VISTAS ... (Todo el HTML se mantiene igual, lo omito por brevedad) -->
+        <!-- VISTAS ... (El HTML se mantiene igual, se omite por brevedad) -->
         <!-- VISTA DE SOLICITANTE -->
         <div id="requesterView" class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" style="display: none;">
             <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
@@ -226,18 +226,33 @@
             return 'border-l-4 border-gray-300 bg-gray-50';
         };
 
+        // --- CAMBIO 1: Hacer la función de traducción de estado más inteligente ---
         const translateStatus = (s, req) => {
             const statusMap = {
                 'pending':'Pendiente', 'processing_partial_items':'En Revisión',
                 'pending_nt_start': 'Pendiente por NT', 'pending_nt_active': 'Preparando NT',
                 'ready_to_ship': 'Por Enviar', 'shipping_details': 'Pendiente de Guía',
                 'shipped': 'Enviado (Por Recibir)', 'completed':'Recibido Completo', 
-                'completed_incomplete': 'Recibido Incompleto (Con Novedad)', 'novelty_review': 'En Revisión de Novedad',
+                'novelty_review': 'En Revisión de Novedad',
                 'cancelled':'Cancelado'
             };
+
+            if (s === 'completed_incomplete') {
+                if (req && req.items) {
+                    const hasShortage = req.items.some(item => item.receivedQuantity < item.sentQuantity);
+                    const hasExcess = req.items.some(item => item.receivedQuantity > item.sentQuantity);
+
+                    if (hasExcess && !hasShortage) return 'Recibido con Excedente (Con Novedad)';
+                    if (hasShortage && !hasExcess) return 'Recibido Incompleto (Con Novedad)';
+                    if (hasShortage && hasExcess) return 'Recibido con Discrepancia (Con Novedad)';
+                }
+                return 'Recibido Incompleto (Con Novedad)'; // Fallback
+            }
+
             if (s === 'completed' && req.novelty) {
                 return 'Recibido Incompleto (Resuelto)';
             }
+
             return statusMap[s] || s;
         };
         
@@ -260,17 +275,16 @@
             if (!currentUserData) return;
             const { name, role } = currentUserData;
 
-            // Ocultar todas las vistas primero
             dom.requesterView.style.display = 'none';
             dom.adminView.style.display = 'none';
             dom.reviewerView.style.display = 'none';
 
             if (role === 'admin') {
-                dom.adminView.style.display = 'block'; // Usar block por el layout space-y
+                dom.adminView.style.display = 'block';
                 dom.productManagementCard.style.display = 'block';
             } else if (role === 'reviewer') {
                 dom.reviewerView.style.display = 'block';
-            } else { // 'requester'
+            } else { 
                 dom.requesterView.style.display = 'grid';
                 dom.requesterName.innerHTML = `<option value="${currentUserData.name}">${currentUserData.name}</option>`;
                 dom.requesterName.value = currentUserData.name;
@@ -382,7 +396,7 @@
                          quantityDisplay += ` | Enviado: <b>${item.sentQuantity}</b>`;
                     }
                     if (item.receivedQuantity !== undefined) {
-                        const color = item.receivedQuantity < item.sentQuantity ? 'text-red-600' : 'text-green-700';
+                        const color = item.receivedQuantity !== item.sentQuantity ? 'text-red-600' : 'text-green-700';
                         quantityDisplay += ` | Recibido: <b class="${color}">${item.receivedQuantity}</b>`;
                     }
                 }
@@ -615,24 +629,48 @@
             renderAllSections();
         }
 
+        // --- CAMBIO 2: Usar transacciones para evitar condiciones de carrera ---
         async function handleNtCheckboxChange(event) {
             const { requestId, itemIndex } = event.currentTarget.dataset;
             const isChecked = event.currentTarget.checked;
-            const updatePath = `items.${itemIndex}.nt_checked`;
-            
-            await transfersCollection.doc(requestId).update({
-                [updatePath]: isChecked
-            });
+            const reqRef = transfersCollection.doc(requestId);
+
+            try {
+                await db.runTransaction(async (transaction) => {
+                    const doc = await transaction.get(reqRef);
+                    if (!doc.exists) { throw "El documento no existe!"; }
+                    
+                    const items = doc.data().items;
+                    if (items[itemIndex]) {
+                        items[itemIndex].nt_checked = isChecked;
+                        transaction.update(reqRef, { items: items });
+                    }
+                });
+            } catch (e) {
+                console.error("Error en la transacción del checkbox: ", e);
+            }
         }
         
+        // --- CAMBIO 2: Usar transacciones para evitar condiciones de carrera ---
         async function handleAdminQuantityChange(event) {
             const { requestId, itemIndex } = event.currentTarget.dataset;
             const newSentQuantity = parseInt(event.currentTarget.value, 10);
-            const updatePath = `items.${itemIndex}.sentQuantity`;
-
-            await transfersCollection.doc(requestId).update({
-                [updatePath]: newSentQuantity
-            });
+            const reqRef = transfersCollection.doc(requestId);
+            
+            try {
+                await db.runTransaction(async (transaction) => {
+                    const doc = await transaction.get(reqRef);
+                    if (!doc.exists) { throw "El documento no existe!"; }
+                    
+                    const items = doc.data().items;
+                    if (items[itemIndex]) {
+                        items[itemIndex].sentQuantity = newSentQuantity;
+                        transaction.update(reqRef, { items: items });
+                    }
+                });
+            } catch (e) {
+                console.error("Error en la transacción de cantidad: ", e);
+            }
         }
 
         async function handleNtNumberInput(event) {
@@ -748,7 +786,6 @@
             document.getElementById('deliveryDate').valueAsDate = new Date();
         }
 
-        // --- CAMBIO CLAVE: Corregir la lógica de finalización de recepción ---
         async function handleFinalizeReception(event) {
             const button = event.currentTarget;
             const requestId = button.dataset.requestId;
@@ -761,14 +798,13 @@
             const doc = await reqRef.get();
             if (!doc.exists) return;
             let items = doc.data().items;
-            let isComplete = true; // Asumimos que está completo hasta encontrar una discrepancia
+            let isComplete = true;
             
             qtyInputs.forEach((input) => {
                 const index = parseInt(input.dataset.itemIndex, 10);
                 const receivedQty = parseInt(input.value, 10);
                 if (items[index]) {
                     items[index].receivedQuantity = receivedQty;
-                    // Si lo recibido es DIFERENTE a lo enviado, se marca como incompleto
                     if (receivedQty !== items[index].sentQuantity) {
                         isComplete = false;
                     }
