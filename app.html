@@ -153,6 +153,68 @@
                 </div>
             </div>
         </div>
+        
+        <!-- ======================================= -->
+        <!-- ==        VISTA DE GERENCIA          == -->
+        <!-- ======================================= -->
+        <div id="managementView" class="space-y-8" style="display: none;">
+            <!-- Dashboard Analítico -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Dashboard Analítico</h2>
+                <div id="statsContainer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 text-center">
+                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <p class="text-sm font-medium text-blue-800">Total Solicitudes</p>
+                        <p id="statsTotal" class="text-3xl font-bold text-blue-900">0</p>
+                    </div>
+                    <div class="p-4 bg-red-50 rounded-lg border border-red-200">
+                        <p class="text-sm font-medium text-red-800">Pendientes</p>
+                        <p id="statsPending" class="text-3xl font-bold text-red-900">0</p>
+                    </div>
+                    <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <p class="text-sm font-medium text-yellow-800">En Proceso</p>
+                        <p id="statsProcessing" class="text-3xl font-bold text-yellow-900">0</p>
+                    </div>
+                    <div class="p-4 bg-cyan-50 rounded-lg border border-cyan-200">
+                        <p class="text-sm font-medium text-cyan-800">Enviadas</p>
+                        <p id="statsShipped" class="text-3xl font-bold text-cyan-900">0</p>
+                    </div>
+                    <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                        <p class="text-sm font-medium text-green-800">Completadas</p>
+                        <p id="statsCompleted" class="text-3xl font-bold text-green-900">0</p>
+                    </div>
+                    <div class="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                        <p class="text-sm font-medium text-orange-800">Con Novedad</p>
+                        <p id="statsNovelty" class="text-3xl font-bold text-orange-900">0</p>
+                    </div>
+                    <div class="p-4 bg-gray-200 rounded-lg border border-gray-300">
+                        <p class="text-sm font-medium text-gray-800">Canceladas</p>
+                        <p id="statsCancelled" class="text-3xl font-bold text-gray-900">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Todas las Solicitudes -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <div class="flex flex-wrap justify-between items-center border-b pb-3 mb-4 gap-4">
+                    <h2 class="text-2xl font-semibold text-gray-800">Todas las Solicitudes</h2>
+                    <button id="exportExcelBtnManagement" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <span>Exportar Historial</span>
+                    </button>
+                </div>
+                <div class="space-y-2 mb-4">
+                    <input type="text" id="managementSearchId" placeholder="Buscar por ID o Solicitante..." class="w-full px-3 py-2 border rounded-lg">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input type="date" id="managementDateFrom" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Desde">
+                        <input type="date" id="managementDateTo" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Hasta">
+                    </div>
+                </div>
+                <div class="max-h-[80vh] overflow-y-auto">
+                    <div id="managementAllRequests" class="grid gap-4"></div>
+                </div>
+            </div>
+        </div>
+
     </div>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -172,22 +234,23 @@
         const transfersCollection = db.collection("transferencias");
         const productsCollection = db.collection("products");
 
-        // --- ROLES DE USUARIO ---
+        // --- ROLES DE USUARIO (NUEVO ROL 'management' AÑADIDO) ---
         const USER_ROLES = {
             'administrador.pruebas@gmail.com': ['Administrador', 'admin'],
             'pruebaspb@gmail.com': ['Punto de venta Cali centro', 'requester'],
             'separador.pruebas@gmail.com': ['Usuario Revisor', 'reviewer'],
+            'gerencia.pruebas@gmail.com': ['Usuario de Gerencia', 'management'],
         };
 
         // --- ESTADO GLOBAL DE LA APLICACIÓN ---
         let allProducts = [], currentTransferItems = [], allTransferRequests = [], currentUserData = null;
         const expandedRequestsState = new Set();
         const sectionDisplayCounts = {};
-        const INITIAL_DISPLAY_COUNT = 2;
+        const INITIAL_DISPLAY_COUNT = 5; // Ajustado para la vista de gerencia
         const LOAD_MORE_COUNT = 10;
         currentTransferItems = JSON.parse(localStorage.getItem('currentTransferDraft')) || [];
 
-        // --- REFERENCIAS AL DOM ---
+        // --- REFERENCIAS AL DOM (NUEVOS ELEMENTOS AÑADIDOS) ---
         const dom = {
             productList: document.getElementById('productList'), currentTransferRequest: document.getElementById('currentTransferRequest'),
             transferForm: document.getElementById('transferForm'), toWarehouse: document.getElementById('toWarehouse'),
@@ -213,7 +276,23 @@
             reviewerPendingRequests: document.getElementById('reviewerPendingRequests'),
             reviewerSearchId: document.getElementById('reviewerSearchId'),
             reviewerDateFrom: document.getElementById('reviewerDateFrom'),
-            reviewerDateTo: document.getElementById('reviewerDateTo')
+            reviewerDateTo: document.getElementById('reviewerDateTo'),
+            // Nuevos elementos para la vista de Gerencia
+            managementView: document.getElementById('managementView'),
+            managementAllRequests: document.getElementById('managementAllRequests'),
+            managementSearchId: document.getElementById('managementSearchId'),
+            managementDateFrom: document.getElementById('managementDateFrom'),
+            managementDateTo: document.getElementById('managementDateTo'),
+            exportExcelBtnManagement: document.getElementById('exportExcelBtnManagement'),
+            stats: {
+                total: document.getElementById('statsTotal'),
+                pending: document.getElementById('statsPending'),
+                processing: document.getElementById('statsProcessing'),
+                shipped: document.getElementById('statsShipped'),
+                completed: document.getElementById('statsCompleted'),
+                novelty: document.getElementById('statsNovelty'),
+                cancelled: document.getElementById('statsCancelled'),
+            }
         };
 
         // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
@@ -288,12 +367,15 @@
             dom.requesterView.style.display = 'none';
             dom.adminView.style.display = 'none';
             dom.reviewerView.style.display = 'none';
+            dom.managementView.style.display = 'none'; // Ocultar por defecto
 
             if (role === 'admin') {
                 dom.adminView.style.display = 'block';
                 dom.productManagementCard.style.display = 'block';
             } else if (role === 'reviewer') {
                 dom.reviewerView.style.display = 'block';
+            } else if (role === 'management') {
+                dom.managementView.style.display = 'block';
             } else { 
                 dom.requesterView.style.display = 'grid';
                 dom.requesterName.innerHTML = `<option value="${currentUserData.name}">${currentUserData.name}</option>`;
@@ -317,11 +399,42 @@
              }
              return filtered;
         }
+
+        // --- NUEVA FUNCIÓN: CALCULAR Y MOSTRAR ESTADÍSTICAS ---
+        function calculateAndRenderStats(requests) {
+            if (!dom.stats.total) return; // Salir si la vista de gerencia no está activa
+            
+            const stats = requests.reduce((acc, req) => {
+                const s = req.status;
+                if (['pending', 'processing_partial_items'].includes(s)) acc.pending++;
+                else if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details'].includes(s)) acc.processing++;
+                else if (s === 'shipped') acc.shipped++;
+                else if (s === 'completed') acc.completed++;
+                else if (s === 'completed_incomplete' || s === 'novelty_review') acc.novelty++;
+                else if (s === 'cancelled') acc.cancelled++;
+                return acc;
+            }, { pending: 0, processing: 0, shipped: 0, completed: 0, novelty: 0, cancelled: 0 });
+
+            dom.stats.total.textContent = requests.length;
+            dom.stats.pending.textContent = stats.pending;
+            dom.stats.processing.textContent = stats.processing;
+            dom.stats.shipped.textContent = stats.shipped;
+            dom.stats.completed.textContent = stats.completed;
+            dom.stats.novelty.textContent = stats.novelty;
+            dom.stats.cancelled.textContent = stats.cancelled;
+        }
         
         function renderAllSections() {
             if (!currentUserData) return;
             const { name, role } = currentUserData;
             const sortedRequests = allTransferRequests.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+
+            // La vista de gerencia calcula las estadísticas sobre TODOS los traslados
+            if (role === 'management') {
+                calculateAndRenderStats(allTransferRequests);
+                const filteredForManagement = applyFilters(sortedRequests, dom.managementSearchId, dom.managementDateFrom, dom.managementDateTo);
+                renderSection('managementAllRequests', dom.managementAllRequests, filteredForManagement, 'management', "No se encontraron solicitudes con los filtros aplicados.");
+            }
 
             if (role === 'requester') {
                 const allMyRequests = sortedRequests.filter(r => r.requesterName === name);
@@ -385,6 +498,7 @@
         }
         
         function createRequestCard(req, role) {
+            // ... (El resto de esta función permanece igual)
             const isExpanded = expandedRequestsState.has(req.id);
             const card = document.createElement('div');
             card.className = `p-4 rounded-lg shadow-sm flex flex-col ${getRequestStatusColor(req.status, req)}`;
@@ -431,6 +545,7 @@
             }).join('') : '<p class="text-sm text-gray-500 italic">No hay artículos.</p>';
 
             let contentHtml = '';
+            // El rol 'management' es de solo lectura, por lo que no se le añaden botones de acción.
             if (role === 'admin' || role === 'reviewer') {
                 let actionButtonsHtml = '';
 
@@ -548,6 +663,7 @@
         }
 
         async function handleAdminAction(event) {
+            // ... (Esta función permanece igual)
             const button = event.currentTarget;
             const { requestId, action } = button.dataset;
             const reqRef = transfersCollection.doc(requestId);
@@ -635,12 +751,14 @@
         }
         
         function handleToggleDetails(evento) {
+            // ... (Esta función permanece igual)
             const requestId = evento.currentTarget.dataset.requestId;
             expandedRequestsState.has(requestId) ? expandedRequestsState.delete(requestId) : expandedRequestsState.add(requestId);
             renderAllSections();
         }
 
         async function handleNtCheckboxChange(event) {
+            // ... (Esta función permanece igual)
             const checkbox = event.currentTarget;
             const { requestId, itemIndex } = checkbox.dataset;
             const isChecked = checkbox.checked;
@@ -681,6 +799,7 @@
         }
         
         async function handleAdminQuantityChange(event) {
+            // ... (Esta función permanece igual)
             const input = event.currentTarget;
             const { requestId, itemIndex } = input.dataset;
             const newSentQuantity = parseInt(input.value, 10);
@@ -705,11 +824,13 @@
         }
 
         async function handleNtNumberInput(event) {
+            // ... (Esta función permanece igual)
             const { requestId } = event.currentTarget.dataset;
             const ntNumber = event.currentTarget.value;
             await transfersCollection.doc(requestId).update({ ntNumber });
         }
         function validateNtForm(requestId) {
+            // ... (Esta función permanece igual)
             const ntInput = document.getElementById(`ntNumber-${requestId}`);
             const checkboxes = document.querySelectorAll(`.nt-checkbox[data-request-id="${requestId}"]`);
             const readyBtn = document.querySelector(`button[data-action="ready_to_ship"][data-request-id="${requestId}"]`);
@@ -728,11 +849,13 @@
             }
         }
         function handleTrackingOptionChange(event) {
+            // ... (Esta función permanece igual)
             const requestId = event.currentTarget.name.split('-')[1];
             document.getElementById(`trackingNumberDiv-${requestId}`).classList.toggle('hidden', event.currentTarget.value !== 'yes');
         }
 
         function validateNoveltyForm(requestId) {
+            // ... (Esta función permanece igual)
             const reasonSelect = document.getElementById(`noveltyReason-${requestId}`);
             const otherDiv = document.getElementById(`noveltyOtherDiv-${requestId}`);
             const otherReasonInput = document.getElementById(`noveltyOtherReason-${requestId}`);
@@ -748,6 +871,7 @@
         }
 
         function handleAddToTransfer(event) {
+            // ... (Esta función permanece igual)
             const product = allProducts.find(p => p.id === event.currentTarget.dataset.productId);
             if (!product) return;
             const qtyInput = document.getElementById(`qty-${product.id.replace(/[^a-zA-Z0-9-_]/g, '')}`);
@@ -762,6 +886,7 @@
         }
 
         async function handleSubmitTransferForm(event) {
+            // ... (Esta función permanece igual)
             event.preventDefault();
             const editingId = document.getElementById('editingRequestId').value;
             if (!dom.fromWarehouse.value || !dom.toWarehouse.value || !dom.requesterName.value || currentTransferItems.length === 0 || !document.getElementById('deliveryDate').value) {
@@ -787,6 +912,7 @@
         }
 
         async function handleStartEdit(event) {
+            // ... (Esta función permanece igual)
             const requestToEdit = allTransferRequests.find(r => r.id === event.currentTarget.dataset.requestId);
             if (!requestToEdit) return;
             document.getElementById('editingRequestId').value = requestToEdit.id;
@@ -804,6 +930,7 @@
         }
 
         function resetFormToCreateMode() {
+            // ... (Esta función permanece igual)
             currentTransferItems = [];
             localStorage.removeItem('currentTransferDraft');
             renderCurrentTransfer();
@@ -818,6 +945,7 @@
         }
 
         async function handleFinalizeReception(event) {
+            // ... (Esta función permanece igual)
             const button = event.currentTarget;
             const requestId = button.dataset.requestId;
             button.disabled = true; button.textContent = 'Procesando...';
@@ -855,6 +983,7 @@
         }
         
         function generateCustomId() {
+            // ... (Esta función permanece igual)
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let result = '';
             for (let i = 0; i < 7; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -862,6 +991,7 @@
         }
         
         function renderCurrentTransfer() {
+            // ... (Esta función permanece igual)
             dom.currentTransferRequest.innerHTML = currentTransferItems.length === 0 ? '<p class="text-gray-500 italic text-center py-4">Añade productos.</p>' : '';
             if (currentTransferItems.length > 0) {
                 const ul = document.createElement('ul');
@@ -888,6 +1018,7 @@
         }
 
         async function loadAndTransformProducts() {
+            // ... (Esta función permanece igual)
             try {
                 const snapshot = await productsCollection.orderBy("name").get();
                 if (snapshot.empty) { console.warn("La colección 'products' está vacía."); return []; }
@@ -900,6 +1031,7 @@
         }
         
         async function handleProductUpload() {
+            // ... (Esta función permanece igual)
             const fileInput = dom.productFile;
             if (fileInput.files.length === 0) { alert("Por favor, selecciona un archivo primero."); return; }
             const file = fileInput.files[0];
@@ -935,6 +1067,7 @@
         }
 
         function transformRawJsonToProducts(rawData) {
+            // ... (Esta función permanece igual)
             const uniqueProductStrings = new Set();
             if (Array.isArray(rawData)) {
                 rawData.forEach(item => {
@@ -963,8 +1096,9 @@
         }
 
         function exportHistoryToExcel() {
+            // ... (Esta función permanece igual)
             const historyRequests = allTransferRequests.filter(r => r.status.startsWith('completed') || r.status === 'cancelled');
-            if (historyRequests.length === 0) { alert("No hay datos en historial."); return; }
+            if (historyRequests.length === 0) { alert("No hay datos en historial para exportar."); return; }
             let excelData = [];
             historyRequests.forEach(req => {
                 const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleString('es-CO') : 'N/A';
@@ -991,6 +1125,7 @@
         }
         
         function renderProducts(productsToRender) {
+            // ... (Esta función permanece igual)
             dom.productList.innerHTML = '';
             if (!productsToRender || productsToRender.length === 0) {
                 dom.productList.innerHTML = '<p class="text-gray-500 col-span-full text-center">No se encontraron productos.</p>';
@@ -1023,12 +1158,14 @@
                                         warehouseOptions.map(w => `<option value="${w}">${w}</option>`).join('');
             
             dom.exportExcelBtn.onclick = exportHistoryToExcel;
+            dom.exportExcelBtnManagement.onclick = exportHistoryToExcel; // El botón de gerencia usa la misma función
             dom.uploadProductsBtn.onclick = handleProductUpload;
             dom.transferForm.onsubmit = handleSubmitTransferForm;
             dom.searchInput.oninput = () => renderProducts(allProducts.filter(p => p.name.toLowerCase().includes(dom.searchInput.value.toLowerCase())));
             dom.productFile.onchange = () => { dom.fileNameDisplay.textContent = dom.productFile.files.length > 0 ? dom.productFile.files[0].name : 'Ningún archivo seleccionado.'; dom.uploadStatus.textContent = ''; };
             
-            ['requesterSearchId', 'requesterDateFrom', 'requesterDateTo', 'adminActiveSearchId', 'adminActiveDateFrom', 'adminActiveDateTo', 'adminHistorySearchId', 'adminHistoryDateFrom', 'adminHistoryDateTo', 'reviewerSearchId', 'reviewerDateFrom', 'reviewerDateTo'].forEach(id => {
+            // Añadir los nuevos filtros de gerencia a los event listeners
+            ['requesterSearchId', 'requesterDateFrom', 'requesterDateTo', 'adminActiveSearchId', 'adminActiveDateFrom', 'adminActiveDateTo', 'adminHistorySearchId', 'adminHistoryDateFrom', 'adminHistoryDateTo', 'reviewerSearchId', 'reviewerDateFrom', 'reviewerDateTo', 'managementSearchId', 'managementDateFrom', 'managementDateTo'].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
                     element.addEventListener('input', renderAllSections);
