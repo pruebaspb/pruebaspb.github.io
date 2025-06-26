@@ -1106,38 +1106,41 @@
             charts = {};
         }
 
-        function handleReportGeneration() {
+                function handleReportGeneration() {
             const timeRange = dom.reportTimeRange.value;
-            let startDate, endDate = new Date();
-            endDate.setHours(23, 59, 59, 999); 
+            let endDate = new Date();
+            endDate.setHours(23, 59, 59, 999); // Final del día actual
+            let startDate = new Date();
 
             if (timeRange === 'today') {
-                startDate = new Date();
-                startDate.setHours(0, 0, 0, 0);
+                startDate.setHours(0, 0, 0, 0); // Inicio del día actual
             } else if (timeRange === 'this_week') {
-                startDate = new Date();
                 const day = startDate.getDay();
-                const diff = startDate.getDate() - day + (day === 0 ? -6:1); // adjust when day is sunday
+                // Ajuste para que la semana empiece en Lunes (1) y termine en Domingo (0)
+                const diff = startDate.getDate() - day + (day === 0 ? -6 : 1); 
                 startDate = new Date(startDate.setDate(diff));
                 startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'this_month') {
                 startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+                startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'last_3_months') {
                 startDate = new Date();
                 startDate.setMonth(startDate.getMonth() - 3);
+                startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'custom') {
                 if (!dom.reportDateFrom.value || !dom.reportDateTo.value) {
                     alert("Por favor, selecciona un rango de fechas personalizado.");
                     return;
                 }
-                startDate = new Date(dom.reportDateFrom.value);
-                endDate = new Date(dom.reportDateTo.value);
-                startDate.setHours(0, 0, 0, 0);
-                endDate.setHours(23, 59, 59, 999);
+                // Asegurar que las fechas personalizadas se interpreten correctamente
+                startDate = new Date(dom.reportDateFrom.value + 'T00:00:00');
+                endDate = new Date(dom.reportDateTo.value + 'T23:59:59');
             }
 
             const filteredRequests = allTransferRequests.filter(req => {
-                if (!req.timestamp?.toDate) return false;
+                if (!req.timestamp || typeof req.timestamp.toDate !== 'function') {
+                    return false; // Ignorar solicitudes sin timestamp válido
+                }
                 const reqDate = req.timestamp.toDate();
                 return reqDate >= startDate && reqDate <= endDate;
             });
