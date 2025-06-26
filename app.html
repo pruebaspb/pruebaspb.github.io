@@ -683,7 +683,16 @@
                 start_processing: async () => { const doc = await reqRef.get(); if (doc.exists) { const items = doc.data().items.map(item => ({ ...item, sentQuantity: item.quantity, nt_checked: false })); updateData = { status: 'processing_partial_items', items }; } },
                 save_admin_note: async () => { await reqRef.update({ adminNotes: document.getElementById(`adminNotes-${requestId}`).value }); alert('Nota guardada'); },
                 finalize_processing: () => { if (confirm("¿Finalizar revisión?")) updateData = { status: 'pending_nt_start' }; },
-                start_nt_preparation: async () => { const doc = await reqRef.get(); updateData = { status: 'pending_nt_active', items: doc.exists() ? doc.data().items.map(i => ({...i, nt_checked: false})) : [] }; },
+                start_nt_preparation: async () => {
+                    const doc = await reqRef.get();
+                    if (doc.exists()) {
+                        const currentItems = doc.data().items || []; 
+                        updateData = {
+                            status: 'pending_nt_active',
+                            items: currentItems.map(item => ({ ...item, nt_checked: false }))
+                        };
+                    }
+                },
                 return_to_pending: async () => { if (confirm("¿Devolver a revisión?")) { const doc = await reqRef.get(); if (doc.exists) { const items = doc.data().items.map(({ productId, productName, quantity }) => ({ productId, productName, quantity })); updateData = { status: 'pending', items, adminNotes: firebase.firestore.FieldValue.delete(), ntNumber: firebase.firestore.FieldValue.delete(), shippingNotes: firebase.firestore.FieldValue.delete(), shippingInfo: firebase.firestore.FieldValue.delete(), reception: firebase.firestore.FieldValue.delete(), novelty: firebase.firestore.FieldValue.delete() }; } } },
                 ready_to_ship: () => { if (confirm("¿Marcar como listo para enviar?")) updateData = { status: 'ready_to_ship' }; },
                 save_shipping_note: async () => { await reqRef.update({ shippingNotes: document.getElementById(`shippingNotes-${requestId}`).value }); alert('Nota de envío guardada'); },
