@@ -137,9 +137,26 @@
                 </div>
             </div>
         </div>
-                <!-- VISTA GERENCIAL (NUEVA) -->
+
+        <!-- VISTA DE REVISOR -->
+        <div id="reviewerView" class="space-y-8" style="display: none;">
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Pendientes de Revisión</h2>
+                <div class="space-y-2 mb-4">
+                    <input type="text" id="reviewerSearchId" placeholder="Buscar por ID o Solicitante..." class="w-full px-3 py-2 border rounded-lg">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" id="reviewerDateFrom" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Desde">
+                        <input type="date" id="reviewerDateTo" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Hasta">
+                    </div>
+                </div>
+                <div class="max-h-[80vh] overflow-y-auto">
+                    <div id="reviewerPendingRequests" class="grid gap-4 mb-6"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- VISTA GERENCIAL -->
         <div id="managerView" class="space-y-8" style="display: none;">
-            <!-- Panel de Filtros -->
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Panel de Informes Gerenciales</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
@@ -168,69 +185,18 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Contenedor de Estadísticas y Gráficos -->
             <div id="reportResults" class="space-y-8" style="display: none;">
-                <!-- Tarjetas de Resumen (KPIs) -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div class="bg-white p-4 rounded-xl shadow-lg">
-                        <h3 class="text-sm font-medium text-gray-500">Total Solicitudes</h3>
-                        <p id="kpiTotalRequests" class="mt-1 text-3xl font-semibold text-gray-900">-</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow-lg">
-                        <h3 class="text-sm font-medium text-gray-500">Completadas</h3>
-                        <p id="kpiCompleted" class="mt-1 text-3xl font-semibold text-green-600">-</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow-lg">
-                        <h3 class="text-sm font-medium text-gray-500">Con Novedad</h3>
-                        <p id="kpiWithNovelty" class="mt-1 text-3xl font-semibold text-yellow-600">-</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl shadow-lg">
-                        <h3 class="text-sm font-medium text-gray-500">Canceladas</h3>
-                        <p id="kpiCancelled" class="mt-1 text-3xl font-semibold text-red-600">-</p>
-                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Total Solicitudes</h3><p id="kpiTotalRequests" class="mt-1 text-3xl font-semibold text-gray-900">-</p></div>
+                    <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Completadas</h3><p id="kpiCompleted" class="mt-1 text-3xl font-semibold text-green-600">-</p></div>
+                    <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Con Novedad</h3><p id="kpiWithNovelty" class="mt-1 text-3xl font-semibold text-yellow-600">-</p></div>
+                    <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Canceladas</h3><p id="kpiCancelled" class="mt-1 text-3xl font-semibold text-red-600">-</p></div>
                 </div>
-
-                <!-- Gráficos -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Gráfico de Estado de Solicitudes -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Estado de Solicitudes</h3>
-                        <canvas id="statusChart"></canvas>
-                    </div>
-                    <!-- Gráfico de Productos Más Solicitados -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top 5 Productos Más Solicitados (Unidades)</h3>
-                        <canvas id="topProductsChart"></canvas>
-                    </div>
-                    <!-- Gráfico de Solicitudes por Bodega -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Volumen de Solicitudes por Bodega Destino</h3>
-                        <canvas id="warehouseChart"></canvas>
-                    </div>
-                    <!-- Tasa de Cumplimiento -->
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Tasa de Cumplimiento (Unidades)</h3>
-                        <p class="text-sm text-gray-500 -mt-2 mb-4">(Enviadas vs. Recibidas en traslados finalizados)</p>
-                        <canvas id="fulfillmentChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- VISTA DE REVISOR -->
-        <div id="reviewerView" class="space-y-8" style="display: none;">
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Pendientes de Revisión</h2>
-                <div class="space-y-2 mb-4">
-                    <input type="text" id="reviewerSearchId" placeholder="Buscar por ID o Solicitante..." class="w-full px-3 py-2 border rounded-lg">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="date" id="reviewerDateFrom" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Desde">
-                        <input type="date" id="reviewerDateTo" class="w-full px-3 py-2 border rounded-lg text-sm" title="Fecha Hasta">
-                    </div>
-                </div>
-                <div class="max-h-[80vh] overflow-y-auto">
-                    <div id="reviewerPendingRequests" class="grid gap-4 mb-6"></div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg"><h3 class="text-lg font-semibold text-gray-800 mb-4">Estado de Solicitudes</h3><canvas id="statusChart"></canvas></div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg"><h3 class="text-lg font-semibold text-gray-800 mb-4">Top 5 Productos Más Solicitados</h3><canvas id="topProductsChart"></canvas></div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg"><h3 class="text-lg font-semibold text-gray-800 mb-4">Volumen por Bodega Destino</h3><canvas id="warehouseChart"></canvas></div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg"><h3 class="text-lg font-semibold text-gray-800 mb-4">Tasa de Cumplimiento (Unidades)</h3><p class="text-sm text-gray-500 -mt-2 mb-4">(Enviadas vs. Recibidas en traslados finalizados)</p><canvas id="fulfillmentChart"></canvas></div>
                 </div>
             </div>
         </div>
@@ -258,11 +224,12 @@
             'administrador.pruebas@gmail.com': ['Administrador', 'admin'],
             'pruebaspb@gmail.com': ['Punto de venta Cali centro', 'requester'],
             'separador.pruebas@gmail.com': ['Usuario Revisor', 'reviewer'],
-            'gerencia.pruebas@gmail.com': ['Gerencia', 'manager']
+            'gerencia.pruebas@gmail.com': ['Gerencia', 'manager'],
         };
 
         // --- ESTADO GLOBAL DE LA APLICACIÓN ---
         let allProducts = [], currentTransferItems = [], allTransferRequests = [], currentUserData = null;
+        let charts = {};
         const expandedRequestsState = new Set();
         const sectionDisplayCounts = {};
         const INITIAL_DISPLAY_COUNT = 2;
@@ -313,7 +280,7 @@
             fulfillmentChart: document.getElementById('fulfillmentChart')
         };
 
-        // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
+        // --- FUNCIONES AUXILIARES ---
         const getRequestStatusColor = (s) => {
             if (s === 'pending' || s === 'processing_partial_items') return 'border-l-4 border-red-500 bg-red-50';
             if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped', 'completed_incomplete', 'novelty_review'].includes(s)) return 'border-l-4 border-yellow-500 bg-yellow-50';
@@ -322,7 +289,6 @@
             return 'border-l-4 border-gray-300 bg-gray-50';
         };
 
-        // --- CAMBIO CLAVE: Lógica mejorada para traducir estados de novedad ---
         const translateStatus = (s, req) => {
             const statusMap = {
                 'pending':'Pendiente', 'processing_partial_items':'En Revisión',
@@ -332,34 +298,8 @@
                 'novelty_review': 'En Revisión de Novedad',
                 'cancelled':'Cancelado'
             };
-
-            const checkDiscrepancy = (request) => {
-                if (request && request.items) {
-                    const hasShortage = request.items.some(item => item.receivedQuantity < item.sentQuantity);
-                    const hasExcess = request.items.some(item => item.receivedQuantity > item.sentQuantity);
-                    if (hasShortage && hasExcess) return 'inexacto';
-                    if (hasShortage) return 'Incompleto';
-                    if (hasExcess) return 'Excedente';
-                }
-                return 'Novedad'; // Fallback
-            };
-
-            if (s === 'completed_incomplete') {
-                const discrepancyType = checkDiscrepancy(req);
-                if (discrepancyType === 'inexacto') return 'Recibido con inexacto (Con Novedad)';
-                if (discrepancyType === 'Incompleto') return 'Recibido Incompleto (Con Novedad)';
-                if (discrepancyType === 'Excedente') return 'Recibido con Excedente (Con Novedad)';
-                return 'Recibido con Novedad (Con Novedad)';
-            }
-
-            if (s === 'completed' && req.novelty) {
-                const discrepancyType = checkDiscrepancy(req);
-                if (discrepancyType === 'inexacto') return 'Recibido con inexacto (Resuelto)';
-                if (discrepancyType === 'Incompleto') return 'Recibido Incompleto (Resuelto)';
-                if (discrepancyType === 'Excedente') return 'Recibido con Excedente (Resuelto)';
-                return 'Recibido con Novedad (Resuelto)';
-            }
-
+            if (s === 'completed_incomplete') return 'Recibido con Novedad';
+            if (s === 'completed' && req?.novelty) return 'Recibido con Novedad (Resuelto)';
             return statusMap[s] || s;
         };
         
@@ -378,22 +318,24 @@
 
         dom.logoutBtn.onclick = () => auth.signOut();
         
-                function setupUIForUser() {
+        function setupUIForUser() {
             if (!currentUserData) return;
             const { name, role } = currentUserData;
-
             dom.requesterView.style.display = 'none';
             dom.adminView.style.display = 'none';
             dom.reviewerView.style.display = 'none';
-            dom.managerView.style.display = 'none'; // Ocultar la nueva vista
+            dom.managerView.style.display = 'none';
+            if (dom.productManagementCard) dom.productManagementCard.style.display = 'none';
+            if (dom.reportResults) dom.reportResults.style.display = 'none';
+
 
             if (role === 'admin') {
                 dom.adminView.style.display = 'block';
-                dom.productManagementCard.style.display = 'block';
+                if (dom.productManagementCard) dom.productManagementCard.style.display = 'block';
             } else if (role === 'reviewer') {
                 dom.reviewerView.style.display = 'block';
             } else if (role === 'manager') {
-                dom.managerView.style.display = 'block'; // Mostrar la vista gerencial
+                dom.managerView.style.display = 'block';
             } else { 
                 dom.requesterView.style.display = 'grid';
                 dom.requesterName.innerHTML = `<option value="${currentUserData.name}">${currentUserData.name}</option>`;
@@ -402,6 +344,7 @@
         }
         
         function applyFilters(requests, searchInput, dateFromInput, dateToInput) {
+             if (!requests || !searchInput || !dateFromInput || !dateToInput) return [];
              const searchTerm = searchInput.value.toLowerCase().trim();
              const dateFrom = dateFromInput.value;
              const dateTo = dateToInput.value;
@@ -491,7 +434,6 @@
             card.id = `card-${req.id}`;
 
             const hasItems = req.items && req.items.length > 0;
-
             const allNtItemsChecked = hasItems && req.status === 'pending_nt_active' && req.items.every(item => item.nt_checked);
             const hasNtNumber = req.status === 'pending_nt_active' && req.ntNumber && req.ntNumber.trim() !== '';
             const canProceedFromNt = allNtItemsChecked && hasNtNumber;
@@ -553,29 +495,25 @@
                     if (['pending', 'processing_partial_items', 'pending_nt_start', 'pending_nt_active'].includes(req.status)) {
                         actionButtonsHtml += `<button data-request-id="${req.id}" data-action="cancel" class="action-btn bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-3 rounded-md">Cancelar</button>`;
                     }
-                    if (actionButtonsHtml) {
-                        contentHtml += `<div class="mt-4 border-t pt-4 flex justify-end gap-2 flex-wrap">${actionButtonsHtml}</div>`;
-                        actionButtonsHtml = ''; 
-                    }
                     if (req.status === 'ready_to_ship') {
                         contentHtml += `<div class="mt-4 space-y-2"><label for="shippingNotes-${req.id}" class="text-sm font-medium">Obs. de Envío (Opcional):</label><textarea id="shippingNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2">${req.shippingNotes || ''}</textarea><button data-request-id="${req.id}" data-action="save_shipping_note" class="action-btn mt-1 text-xs bg-gray-700 px-3 py-1.5 rounded-md text-white">Guardar Nota</button></div>`;
-                        contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="proceed_to_shipping" class="action-btn w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-3 rounded-md">Proceder a Envío</button></div>`;
+                        actionButtonsHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="proceed_to_shipping" class="action-btn w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-3 rounded-md">Proceder a Envío</button></div>`;
                     }
                     if (req.status === 'shipping_details') {
                         contentHtml += `<div class="mt-4 space-y-3 p-3 bg-gray-100 rounded-lg border"><p class="font-semibold">¿Tiene guía?</p><div class="flex items-center gap-x-4"><label><input type="radio" name="hasTracking-${req.id}" value="yes" class="tracking-option"> Sí</label><label><input type="radio" name="hasTracking-${req.id}" value="no" class="tracking-option" checked> No</label></div><div id="trackingNumberDiv-${req.id}" class="hidden mt-2"><label for="trackingNumber-${req.id}" class="block text-sm font-medium">Nº de Guía:</label><input type="text" id="trackingNumber-${req.id}" class="w-full mt-1 border rounded-md p-2"></div></div>`;
-                        contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="finalize_shipment" class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Marcar como Enviado</button></div>`;
+                        actionButtonsHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="finalize_shipment" class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Marcar como Enviado</button></div>`;
                     }
                     if (req.status === 'completed_incomplete') {
-                        contentHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_novelty_review" class="action-btn w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-3 rounded-md">Iniciar Revisión de Novedad</button></div>`;
+                         actionButtonsHtml += `<div class="mt-4"><button data-request-id="${req.id}" data-action="start_novelty_review" class="action-btn w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-3 rounded-md">Iniciar Revisión de Novedad</button></div>`;
                     }
                     if (req.status === 'novelty_review' && role === 'admin') {
                         contentHtml += `<div id="noveltyForm-${req.id}" class="mt-4 p-4 bg-gray-100 border-t-2 space-y-4"><h5 class="font-bold text-lg">Gestionar Novedad</h5><div><label class="block text-sm font-medium">Causa:</label><select id="noveltyReason-${req.id}" data-request-id="${req.id}" class="novelty-input mt-1 block w-full p-2 border rounded-md"><option value="" selected disabled>-- Seleccione --</option><option value="Error de empaque">Error de empaque</option><option value="Perdida en transporte">Pérdida en transporte</option><option value="Otro">Otro</option></select></div><div id="noveltyOtherDiv-${req.id}" class="hidden"><label for="noveltyOtherReason-${req.id}" class="block text-sm font-medium">Especifique:</label><input type="text" id="noveltyOtherReason-${req.id}" data-request-id="${req.id}" class="novelty-input mt-1 block w-full p-2 border rounded-md"></div><div><label for="noveltySolution-${req.id}" class="block text-sm font-medium">Solución:</label><textarea id="noveltySolution-${req.id}" data-request-id="${req.id}" rows="3" class="novelty-input mt-1 block w-full p-2 border rounded-md"></textarea></div><button data-request-id="${req.id}" data-action="finalize_novelty" class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md disabled:bg-gray-400" disabled>Finalizar Novedad</button></div>`;
                     }
-                } else if (actionButtonsHtml) {
+                }
+                if (actionButtonsHtml) {
                      contentHtml += `<div class="mt-4 border-t pt-4 flex justify-end gap-2 flex-wrap">${actionButtonsHtml}</div>`;
                 }
             }
-
             if (role === 'requester' && req.status === 'shipped') {
                 contentHtml += `<div class="mt-4 border-t-2 pt-4 space-y-3"><h5 class="font-bold text-md">Confirmar recepción</h5><div><label class="block text-sm font-medium">Obs. de recepción:</label><textarea id="receptionNotes-${req.id}" rows="2" class="w-full mt-1 border rounded-md p-2"></textarea></div><button data-request-id="${req.id}" data-action="finalize_reception" class="action-btn w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-md">Finalizar Recepción</button></div>`;
             }
@@ -629,8 +567,13 @@
             
             card.querySelectorAll('.nt-checkbox').forEach(c => {
                 c.oninput = () => {
-                    if (allTransferRequests.find(r => r.id === c.dataset.requestId)?.status === 'pending_nt_active') {
+                    const reqStatus = allTransferRequests.find(r => r.id === c.dataset.requestId)?.status;
+                    if (reqStatus === 'pending_nt_active') {
                         validateNtForm(c.dataset.requestId);
+                    } else if (reqStatus === 'processing_partial_items') {
+                        const allChecked = Array.from(document.querySelectorAll(`#card-${c.dataset.requestId} .nt-checkbox`)).every(cb => cb.checked);
+                        const finalizeBtn = document.querySelector(`#card-${c.dataset.requestId} button[data-action="finalize_processing"]`);
+                        if(finalizeBtn) finalizeBtn.disabled = !allChecked;
                     }
                 };
                 c.onchange = handleNtCheckboxChange;
@@ -659,6 +602,7 @@
                     if(doc.exists) {
                         const itemsToProcess = doc.data().items.map(item => ({ ...item, sentQuantity: item.quantity, nt_checked: false }));
                         updateData = { status: 'processing_partial_items', items: itemsToProcess };
+                        expandedRequestsState.add(requestId);
                     }
                 },
                 save_admin_note: async () => {
@@ -676,8 +620,7 @@
                             status: 'pending_nt_active',
                             items: itemsForNt
                         };
-                    } else {
-                        updateData = { status: 'pending_nt_active' };
+                        expandedRequestsState.add(requestId);
                     }
                 },
                 return_to_pending: async () => {
@@ -710,6 +653,7 @@
                 },
                 start_novelty_review: () => {
                     updateData = { status: 'novelty_review' };
+                    expandedRequestsState.add(requestId);
                 },
                 finalize_novelty: () => {
                     const reasonSelect = document.getElementById(`noveltyReason-${requestId}`);
@@ -745,18 +689,7 @@
             const { requestId, itemIndex } = checkbox.dataset;
             const isChecked = checkbox.checked;
             const reqRef = transfersCollection.doc(requestId);
-
-            const itemRow = document.querySelector(`[data-item-row-id="${requestId}-${itemIndex}"]`);
-            if (itemRow) {
-                itemRow.classList.toggle('bg-green-100', isChecked);
-                itemRow.classList.toggle('bg-red-100', !isChecked);
-            }
             
-            const allCheckboxes = Array.from(document.querySelectorAll(`#card-${requestId} .nt-checkbox`));
-            const allReviewItemsChecked = allCheckboxes.every(cb => cb.checked);
-            const finalizeBtn = document.querySelector(`#card-${requestId} button[data-action="finalize_processing"]`);
-            if(finalizeBtn) finalizeBtn.disabled = !allReviewItemsChecked;
-
             try {
                 await db.runTransaction(async (transaction) => {
                     const doc = await transaction.get(reqRef);
@@ -769,13 +702,8 @@
                     }
                 });
             } catch (e) {
-                console.error("Fallo la transacción del checkbox, revirtiendo UI:", e);
+                console.error("Fallo la transacción del checkbox:", e);
                 checkbox.checked = !isChecked; 
-                if (itemRow) {
-                    itemRow.classList.toggle('bg-green-100', !isChecked);
-                    itemRow.classList.toggle('bg-red-100', isChecked);
-                }
-                if(finalizeBtn) finalizeBtn.disabled = true;
                 alert("No se pudo guardar el cambio. Inténtalo de nuevo.");
             }
         }
@@ -811,7 +739,7 @@
         }
         function validateNtForm(requestId) {
             const ntInput = document.getElementById(`ntNumber-${requestId}`);
-            const checkboxes = document.querySelectorAll(`.nt-checkbox[data-request-id="${requestId}"]`);
+            const checkboxes = document.querySelectorAll(`#card-${requestId} .nt-checkbox`);
             const readyBtn = document.querySelector(`button[data-action="ready_to_ship"][data-request-id="${requestId}"]`);
 
             if (!ntInput || !readyBtn) return;
@@ -819,13 +747,7 @@
             const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
             const hasText = ntInput.value.trim() !== '';
 
-            if (allChecked && hasText) {
-                readyBtn.disabled = false;
-                readyBtn.classList.remove('disabled:bg-gray-400');
-            } else {
-                readyBtn.disabled = true;
-                readyBtn.classList.add('disabled:bg-gray-400');
-            }
+            readyBtn.disabled = !(allChecked && hasText);
         }
         function handleTrackingOptionChange(event) {
             const requestId = event.currentTarget.name.split('-')[1];
@@ -844,9 +766,8 @@
             const isReasonValid = reasonSelect.value && (reasonSelect.value !== 'Otro' || otherReasonInput.value.trim() !== '');
             const isSolutionValid = solutionTextarea.value.trim() !== '';
             finalizeBtn.disabled = !(isReasonValid && isSolutionValid);
-            finalizeBtn.classList.toggle('disabled:bg-gray-400', !(isReasonValid && isSolutionValid));
         }
-
+        
         function handleAddToTransfer(event) {
             const product = allProducts.find(p => p.id === event.currentTarget.dataset.productId);
             if (!product) return;
@@ -1106,7 +1027,7 @@
             dom.productList.querySelectorAll('.add-to-transfer-btn').forEach(b => b.onclick = handleAddToTransfer);
         }
 
-        async function initializeApp() {
+        function initializeApp() {
             setupUIForUser();
             allProducts = await loadAndTransformProducts();
             renderProducts(allProducts);
@@ -1122,11 +1043,11 @@
             dom.toWarehouse.innerHTML = '<option value="" selected disabled>-- Seleccione una bodega --</option>' + 
                                         warehouseOptions.map(w => `<option value="${w}">${w}</option>`).join('');
             
-            dom.exportExcelBtn.onclick = exportHistoryToExcel;
-            dom.uploadProductsBtn.onclick = handleProductUpload;
-            dom.transferForm.onsubmit = handleSubmitTransferForm;
-            dom.searchInput.oninput = () => renderProducts(allProducts.filter(p => p.name.toLowerCase().includes(dom.searchInput.value.toLowerCase())));
-            dom.productFile.onchange = () => { dom.fileNameDisplay.textContent = dom.productFile.files.length > 0 ? dom.productFile.files[0].name : 'Ningún archivo seleccionado.'; dom.uploadStatus.textContent = ''; };
+            dom.exportExcelBtn?.addEventListener('click', exportHistoryToExcel);
+            dom.uploadProductsBtn?.addEventListener('click', handleProductUpload);
+            dom.transferForm?.addEventListener('submit', handleSubmitTransferForm);
+            dom.searchInput?.addEventListener('input', () => renderProducts(allProducts.filter(p => p.name.toLowerCase().includes(dom.searchInput.value.toLowerCase()))));
+            dom.productFile?.addEventListener('change', () => { dom.fileNameDisplay.textContent = dom.productFile.files.length > 0 ? dom.productFile.files[0].name : 'Ningún archivo seleccionado.'; dom.uploadStatus.textContent = ''; });
             
             ['requesterSearchId', 'requesterDateFrom', 'requesterDateTo', 'adminActiveSearchId', 'adminActiveDateFrom', 'adminActiveDateTo', 'adminHistorySearchId', 'adminHistoryDateFrom', 'adminHistoryDateTo', 'reviewerSearchId', 'reviewerDateFrom', 'reviewerDateTo'].forEach(id => {
                 const element = document.getElementById(id);
@@ -1139,13 +1060,21 @@
                 allTransferRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderAllSections();
             }, error => console.error("Error al conectar: ", error));
-        }
-    });
-            // ==================================================================
-        // INICIO DE LÓGICA PARA INFORMES GERENCIALES
-        // ==================================================================
-        let charts = {}; // Para almacenar instancias de gráficos y destruirlas
 
+            // Lógica de informes
+            if (dom.reportTimeRange) {
+                dom.reportTimeRange.addEventListener('change', () => {
+                    dom.customDateRange.classList.toggle('hidden', dom.reportTimeRange.value !== 'custom');
+                });
+            }
+            if (dom.generateReportBtn) {
+                dom.generateReportBtn.addEventListener('click', handleReportGeneration);
+            }
+        }
+        
+        // ==================================================================
+        // LÓGICA PARA INFORMES GERENCIALES
+        // ==================================================================
         function destroyCharts() {
             Object.values(charts).forEach(chart => chart.destroy());
             charts = {};
@@ -1154,20 +1083,19 @@
         function handleReportGeneration() {
             const timeRange = dom.reportTimeRange.value;
             let startDate, endDate = new Date();
+            endDate.setHours(23, 59, 59, 999); 
 
             if (timeRange === 'today') {
                 startDate = new Date();
                 startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'this_week') {
                 startDate = new Date();
-                startDate.setDate(startDate.getDate() - startDate.getDay());
+                startDate.setDate(startDate.getDate() - (startDate.getDay() + 6) % 7); // Lunes como inicio de semana
                 startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'this_month') {
                 startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
-                startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'last_3_months') {
                 startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 3, 1);
-                startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'custom') {
                 if (!dom.reportDateFrom.value || !dom.reportDateTo.value) {
                     alert("Por favor, selecciona un rango de fechas personalizado.");
@@ -1180,6 +1108,7 @@
             }
 
             const filteredRequests = allTransferRequests.filter(req => {
+                if (!req.timestamp) return false;
                 const reqDate = req.timestamp.toDate();
                 return reqDate >= startDate && reqDate <= endDate;
             });
@@ -1191,112 +1120,65 @@
             }
 
             dom.reportResults.style.display = 'block';
-            destroyCharts(); // Limpiar gráficos anteriores
+            destroyCharts();
             generateAllReports(filteredRequests);
         }
 
         function generateAllReports(data) {
-            // 1. KPIs
+            // KPIs
             dom.kpiTotalRequests.textContent = data.length;
             dom.kpiCompleted.textContent = data.filter(r => r.status.startsWith('completed')).length;
             dom.kpiWithNovelty.textContent = data.filter(r => r.status === 'completed_incomplete' || r.status === 'novelty_review').length;
             dom.kpiCancelled.textContent = data.filter(r => r.status === 'cancelled').length;
 
-            // 2. Gráfico de Estado
+            // Gráfico de Estado
             const statusCounts = data.reduce((acc, req) => {
                 const status = translateStatus(req.status, req);
                 acc[status] = (acc[status] || 0) + 1;
                 return acc;
             }, {});
             charts.statusChart = new Chart(dom.statusChart, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(statusCounts),
-                    datasets: [{
-                        label: 'Número de Solicitudes',
-                        data: Object.values(statusCounts),
-                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b', '#3b82f6', '#6b7280', '#8b5cf6'],
-                    }]
-                },
+                type: 'doughnut', data: { labels: Object.keys(statusCounts), datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#22c55e', '#ef4444', '#f59e0b', '#3b82f6', '#6b7280', '#8b5cf6'] }] },
                 options: { responsive: true, maintainAspectRatio: false }
             });
 
-            // 3. Gráfico de Top Productos
+            // Gráfico de Top Productos
             const productCounts = data.reduce((acc, req) => {
-                if(req.items) {
-                    req.items.forEach(item => {
-                        acc[item.productName] = (acc[item.productName] || 0) + item.quantity;
-                    });
-                }
+                if(req.items) req.items.forEach(item => { acc[item.productName] = (acc[item.productName] || 0) + item.quantity; });
                 return acc;
             }, {});
             const sortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
             charts.topProductsChart = new Chart(dom.topProductsChart, {
-                type: 'bar',
-                data: {
-                    labels: sortedProducts.map(p => p[0]),
-                    datasets: [{
-                        label: 'Unidades Solicitadas',
-                        data: sortedProducts.map(p => p[1]),
-                        backgroundColor: '#1f2937'
-                    }]
-                },
+                type: 'bar', data: { labels: sortedProducts.map(p => p[0]), datasets: [{ label: 'Unidades Solicitadas', data: sortedProducts.map(p => p[1]), backgroundColor: '#1f2937' }] },
                 options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
             });
 
-            // 4. Gráfico de Solicitudes por Bodega
+            // Gráfico de Solicitudes por Bodega
             const warehouseCounts = data.reduce((acc, req) => {
-                if (req.toWarehouse) {
-                    acc[req.toWarehouse] = (acc[req.toWarehouse] || 0) + 1;
-                }
+                if (req.toWarehouse) acc[req.toWarehouse] = (acc[req.toWarehouse] || 0) + 1;
                 return acc;
             }, {});
             charts.warehouseChart = new Chart(dom.warehouseChart, {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(warehouseCounts),
-                    datasets: [{
-                        data: Object.values(warehouseCounts),
-                        backgroundColor: ['#1d4ed8', '#059669', '#d97706', '#dc2626', '#6d28d9', '#db2777'],
-                    }]
-                },
+                type: 'pie', data: { labels: Object.keys(warehouseCounts), datasets: [{ data: Object.values(warehouseCounts), backgroundColor: ['#1d4ed8', '#059669', '#d97706', '#dc2626', '#6d28d9', '#db2777'] }] },
                 options: { responsive: true, maintainAspectRatio: false }
             });
             
-            // 5. Gráfico de Tasa de Cumplimiento
+            // Gráfico de Tasa de Cumplimiento
             const fulfillmentData = data.filter(r => r.status.startsWith('completed')).reduce((acc, req) => {
-                if(req.items) {
-                    req.items.forEach(item => {
-                        acc.sent += (item.sentQuantity || 0);
-                        acc.received += (item.receivedQuantity || 0);
-                    });
-                }
+                if(req.items) req.items.forEach(item => {
+                    acc.sent += (item.sentQuantity || 0);
+                    acc.received += (item.receivedQuantity || 0);
+                });
                 return acc;
             }, { sent: 0, received: 0 });
             charts.fulfillmentChart = new Chart(dom.fulfillmentChart, {
-                type: 'bar',
-                data: {
-                    labels: ['Cumplimiento de Unidades'],
-                    datasets: [
-                        { label: 'Unidades Enviadas', data: [fulfillmentData.sent], backgroundColor: '#a8a29e' },
-                        { label: 'Unidades Recibidas', data: [fulfillmentData.received], backgroundColor: '#16a34a' }
-                    ]
-                },
+                type: 'bar', data: { labels: ['Cumplimiento de Unidades'], datasets: [
+                    { label: 'Unidades Enviadas', data: [fulfillmentData.sent], backgroundColor: '#a8a29e' },
+                    { label: 'Unidades Recibidas', data: [fulfillmentData.received], backgroundColor: '#16a34a' }
+                ]},
                 options: { responsive: true, maintainAspectRatio: false }
             });
         }
-        
-        // Event listeners para los filtros del informe
-        if (dom.reportTimeRange) {
-            dom.reportTimeRange.addEventListener('change', () => {
-                dom.customDateRange.classList.toggle('hidden', dom.reportTimeRange.value !== 'custom');
-            });
-        }
-        if (dom.generateReportBtn) {
-            dom.generateReportBtn.addEventListener('click', handleReportGeneration);
-        }
-        // ==================================================================
-        // FIN DE LÓGICA PARA INFORMES GERENCIALES
-        // ==================================================================
+    });
 </script>
 </html>
