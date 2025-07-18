@@ -348,7 +348,8 @@
             if (dom.reportResults) dom.reportResults.style.display = 'none';
 
             if (role === 'admin') {
-                dom.adminView.style.display = 'block';
+                dom.adminView.style.display = 'block'; // Muestra la vista de administración
+                dom.managerView.style.display = 'block'; // Muestra TAMBIÉN la vista de gerencia/reportes
                 if (dom.productManagementCard) dom.productManagementCard.style.display = 'block';
             } else if (role === 'reviewer') {
                 dom.reviewerView.style.display = 'block';
