@@ -193,14 +193,41 @@
                     <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Canceladas</h3><p id="kpiCancelled" class="mt-1 text-3xl font-semibold text-red-600">-</p></div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="bg-white p-6 rounded-xl shadow-lg h-96"><h3 class="text-lg font-semibold text-gray-800 mb-4">Estado de Solicitudes</h3><canvas id="statusChart"></canvas></div>
-                    <div class="bg-white p-6 rounded-xl shadow-lg h-96"><h3 class="text-lg font-semibold text-gray-800 mb-4">Top 5 Productos Más Solicitados</h3><canvas id="topProductsChart"></canvas></div>
-                    <div class="bg-white p-6 rounded-xl shadow-lg h-96"><h3 class="text-lg font-semibold text-gray-800 mb-4">Volumen por Bodega Destino</h3><canvas id="warehouseChart"></canvas></div>
-                    <div class="bg-white p-6 rounded-xl shadow-lg h-96"><h3 class="text-lg font-semibold text-gray-800 mb-4">Tasa de Cumplimiento (Unidades)</h3><p class="text-sm text-gray-500 -mt-2 mb-4">(Enviadas vs. Recibidas en traslados finalizados)</p><canvas id="fulfillmentChart"></canvas></div>
-                </div>
-            </div>
+
+    <!-- Gráfico 1: Estado de Solicitudes (CORREGIDO) -->
+    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Estado de Solicitudes</h3>
+        <div class="relative flex-grow">
+            <canvas id="statusChart"></canvas>
         </div>
     </div>
+
+    <!-- Gráfico 2: Top 5 Productos (CORREGIDO) -->
+    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top 5 Productos Más Solicitados</h3>
+        <div class="relative flex-grow">
+            <canvas id="topProductsChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Gráfico 3: Volumen por Bodega (CORREGIDO) -->
+    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Volumen por Bodega Destino</h3>
+        <div class="relative flex-grow">
+            <canvas id="warehouseChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Gráfico 4: Tasa de Cumplimiento (CORREGIDO) -->
+    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Tasa de Cumplimiento (Unidades)</h3>
+        <p class="text-sm text-gray-500 -mt-2 mb-4">(Enviadas vs. Recibidas en traslados finalizados)</p>
+        <div class="relative flex-grow">
+            <canvas id="fulfillmentChart"></canvas>
+        </div>
+    </div>
+    
+</div>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- CONFIGURACIÓN DE FIREBASE ---
