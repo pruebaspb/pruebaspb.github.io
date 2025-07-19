@@ -342,38 +342,96 @@
         };
 
         // --- FUNCIONES AUXILIARES ---
-        function exportReportToPdf() {
+                function exportReportToPdf() {
             const reportDiv = document.getElementById('reportResults');
             const pdfButton = document.getElementById('exportPdfBtn');
             const excelButton = document.getElementById('exportExcelBtn_report');
-            const originalDisplay = reportDiv.style.display;
 
-            // Ocultar los botones para que no salgan en la captura
-            reportDiv.style.display = 'block';
+            // 1. Ocultar botones para que no salgan en la captura
             pdfButton.style.display = 'none';
             excelButton.style.display = 'none';
 
-            html2canvas(reportDiv, { 
-                scale: 2, // Mejora la calidad de la imagen
-                useCORS: true // Necesario para que las imágenes (como los gráficos) se rendericen
+            // 2. Crear un contenedor temporal para el diseño del PDF
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.position = 'absolute';
+            pdfContainer.style.left = '0';
+            pdfContainer.style.top = '0';
+            pdfContainer.style.width = '1200px'; // Ancho fijo para consistencia
+            pdfContainer.style.padding = '40px';
+            pdfContainer.style.backgroundColor = 'white';
+            pdfContainer.style.fontFamily = 'Helvetica, Arial, sans-serif';
+
+            // 3. Crear el encabezado del PDF
+            const header = document.createElement('div');
+            header.style.display = 'flex';
+            header.style.justifyContent = 'space-between';
+            header.style.alignItems = 'center';
+            header.style.borderBottom = '2px solid #e5e7eb';
+            header.style.paddingBottom = '20px';
+            header.style.marginBottom = '30px';
+
+            const logoImg = document.createElement('img');
+            logoImg.src = 'https://parabarberos.github.io/2.jpg';
+            logoImg.style.width = '100px';
+            logoImg.style.height = '100px';
+            logoImg.style.borderRadius = '50%';
+
+
+            const titleDiv = document.createElement('div');
+            titleDiv.style.textAlign = 'right';
+
+            const titleH1 = document.createElement('h1');
+            titleH1.innerText = 'Informe Gerencial de Traslados';
+            titleH1.style.margin = '0';
+            titleH1.style.fontSize = '28px';
+            titleH1.style.color = '#111827';
+
+            const dateP = document.createElement('p');
+            dateP.innerText = `Generado el: ${new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+            dateP.style.margin = '5px 0 0';
+            dateP.style.fontSize = '14px';
+            dateP.style.color = '#6b7280';
+
+            titleDiv.appendChild(titleH1);
+            titleDiv.appendChild(dateP);
+            header.appendChild(logoImg);
+            header.appendChild(titleDiv);
+
+            // 4. Clonar el contenido del reporte
+            const content = reportDiv.cloneNode(true);
+            content.style.display = 'block'; // Asegurarse que el contenido clonado sea visible
+
+            // 5. Ensamblar el contenedor del PDF
+            pdfContainer.appendChild(header);
+            pdfContainer.appendChild(content);
+
+            // Añadir el contenedor temporal al cuerpo para que se pueda renderizar
+            document.body.appendChild(pdfContainer);
+
+            // 6. Generar el PDF desde el contenedor temporal
+            html2canvas(pdfContainer, { 
+                scale: 2,
+                useCORS: true
             }).then(canvas => {
                 const imgData = canvas.toDataURL('image/png');
                 const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdf = new jsPDF('l', 'mm', 'a4'); // 'l' para landscape (horizontal)
+                
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
                 
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                pdf.save("Informe_Gerencial_Parabarberos.pdf");
+                pdf.save("Informe_Gerencial_Traslados.pdf");
 
-                // Restaurar la visibilidad original
-                reportDiv.style.display = originalDisplay;
+                // 7. Limpieza: Eliminar el contenedor temporal y restaurar botones
+                document.body.removeChild(pdfContainer);
                 pdfButton.style.display = 'block';
                 excelButton.style.display = 'block';
+
             }).catch(err => {
                 console.error("Error al generar el PDF:", err);
-                // Asegurarse de restaurar la visibilidad incluso si hay un error
-                reportDiv.style.display = originalDisplay;
+                // Asegurarse de restaurar todo incluso si hay un error
+                document.body.removeChild(pdfContainer);
                 pdfButton.style.display = 'block';
                 excelButton.style.display = 'block';
             });
