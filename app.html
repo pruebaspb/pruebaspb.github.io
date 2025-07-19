@@ -158,11 +158,17 @@
         </div>
         
         <!-- VISTA GERENCIAL -->
+        <!-- ==================== BLOQUE CORREGIDO (INICIO) ==================== -->
+        <!-- Se corrigió la estructura HTML anidada que rompía el diseño. -->
         <div id="managerView" class="space-y-8" style="display: none;">
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Panel de Informes Gerenciales</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                    <div>
+                
+                <!-- Controles del Informe (Estructura corregida) -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    
+                    <!-- Selector de Rango de Tiempo -->
+                    <div class="md:col-span-1">
                         <label for="reportTimeRange" class="block text-sm font-medium text-gray-700">Rango de Tiempo</label>
                         <select id="reportTimeRange" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
                             <option value="today">Hoy</option>
@@ -172,7 +178,9 @@
                             <option value="custom">Personalizado</option>
                         </select>
                     </div>
-                    <div id="customDateRange" class="lg:col-span-2 grid grid-cols-2 gap-4 hidden">
+        
+                    <!-- Selector de Fechas Personalizado (se muestra con JS) -->
+                    <div id="customDateRange" class="md:col-span-2 grid grid-cols-2 gap-4 hidden">
                         <div>
                             <label for="reportDateFrom" class="block text-sm font-medium text-gray-700">Desde</label>
                             <input type="date" id="reportDateFrom" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
@@ -182,19 +190,20 @@
                             <input type="date" id="reportDateTo" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
                         </div>
                     </div>
-                    <div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-    <!-- ... selectores de fecha ... -->
-    <div class="col-span-1 lg:col-span-2 grid grid-cols-2 gap-2">
-         <button id="exportPdfBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg" style="display: none;">Exportar PDF</button>
-         <button id="exportExcelBtn_report" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg" style="display: none;">Exportar Excel</button>
-    </div>
-    <div>
-        <button id="generateReportBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">Generar Informe</button>
-    </div>
-</div>
+        
+                    <!-- Botón de Generar Informe -->
+                    <div class="md:col-span-1">
+                        <button id="generateReportBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">Generar Informe</button>
+                    </div>
+                </div>
+                
+                <!-- Botones de Exportar (aparecerán aquí después de generar el informe) -->
+                <div class="mt-6 flex gap-x-4">
+                     <button id="exportPdfBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg" style="display: none;">Exportar PDF</button>
+                     <button id="exportExcelBtn_report" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg" style="display: none;">Exportar Excel</button>
                 </div>
             </div>
+
             <div id="reportResults" class="space-y-8" style="display: none;">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                     <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Total Solicitudes</h3><p id="kpiTotalRequests" class="mt-1 text-3xl font-semibold text-gray-900">-</p></div>
@@ -203,41 +212,36 @@
                     <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Canceladas</h3><p id="kpiCancelled" class="mt-1 text-3xl font-semibold text-red-600">-</p></div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-    <!-- Gráfico 1: Estado de Solicitudes (CORREGIDO) -->
-    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Estado de Solicitudes</h3>
-        <div class="relative flex-grow">
-            <canvas id="statusChart"></canvas>
+                    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Estado de Solicitudes</h3>
+                        <div class="relative flex-grow">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top 5 Productos Más Solicitados</h3>
+                        <div class="relative flex-grow">
+                            <canvas id="topProductsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Volumen por Bodega Destino</h3>
+                        <div class="relative flex-grow">
+                            <canvas id="warehouseChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Tasa de Cumplimiento (Unidades)</h3>
+                        <p class="text-sm text-gray-500 -mt-2 mb-4">(Enviadas vs. Recibidas en traslados finalizados)</p>
+                        <div class="relative flex-grow">
+                            <canvas id="fulfillmentChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+        <!-- ==================== BLOQUE CORREGIDO (FIN) ==================== -->
     </div>
-
-    <!-- Gráfico 2: Top 5 Productos (CORREGIDO) -->
-    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top 5 Productos Más Solicitados</h3>
-        <div class="relative flex-grow">
-            <canvas id="topProductsChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Gráfico 3: Volumen por Bodega (CORREGIDO) -->
-    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Volumen por Bodega Destino</h3>
-        <div class="relative flex-grow">
-            <canvas id="warehouseChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Gráfico 4: Tasa de Cumplimiento (CORREGIDO) -->
-    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Tasa de Cumplimiento (Unidades)</h3>
-        <p class="text-sm text-gray-500 -mt-2 mb-4">(Enviadas vs. Recibidas en traslados finalizados)</p>
-        <div class="relative flex-grow">
-            <canvas id="fulfillmentChart"></canvas>
-        </div>
-    </div>
-    
-</div>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- CONFIGURACIÓN DE FIREBASE ---
@@ -339,38 +343,41 @@
 
         // --- FUNCIONES AUXILIARES ---
         function exportReportToPdf() {
-    const reportDiv = document.getElementById('reportResults');
-    const pdfButton = document.getElementById('exportPdfBtn');
-    const originalDisplay = reportDiv.style.display;
+            const reportDiv = document.getElementById('reportResults');
+            const pdfButton = document.getElementById('exportPdfBtn');
+            const excelButton = document.getElementById('exportExcelBtn_report');
+            const originalDisplay = reportDiv.style.display;
 
-    // Mostrar temporalmente si está oculto y ocultar el botón para que no salga en la captura
-    reportDiv.style.display = 'block';
-    pdfButton.style.display = 'none';
+            // Ocultar los botones para que no salgan en la captura
+            reportDiv.style.display = 'block';
+            pdfButton.style.display = 'none';
+            excelButton.style.display = 'none';
 
-    html2canvas(reportDiv, { 
-        scale: 2, // Mejora la calidad de la imagen
-        useCORS: true // Necesario para que las imágenes (como los gráficos) se rendericen
-    }).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        // Inicializa jsPDF. 'p' para retrato, 'mm' para milímetros, 'a4' para el tamaño de la hoja.
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save("Informe_Gerencial_Parabarberos.pdf");
+            html2canvas(reportDiv, { 
+                scale: 2, // Mejora la calidad de la imagen
+                useCORS: true // Necesario para que las imágenes (como los gráficos) se rendericen
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save("Informe_Gerencial_Parabarberos.pdf");
 
-        // Restaurar la visibilidad original
-        reportDiv.style.display = originalDisplay;
-        pdfButton.style.display = 'block'; // Vuelve a mostrar el botón
-    }).catch(err => {
-        console.error("Error al generar el PDF:", err);
-        // Asegurarse de restaurar la visibilidad incluso si hay un error
-        reportDiv.style.display = originalDisplay;
-        pdfButton.style.display = 'block';
-    });
-}
+                // Restaurar la visibilidad original
+                reportDiv.style.display = originalDisplay;
+                pdfButton.style.display = 'block';
+                excelButton.style.display = 'block';
+            }).catch(err => {
+                console.error("Error al generar el PDF:", err);
+                // Asegurarse de restaurar la visibilidad incluso si hay un error
+                reportDiv.style.display = originalDisplay;
+                pdfButton.style.display = 'block';
+                excelButton.style.display = 'block';
+            });
+        }
         const getRequestStatusColor = (s) => {
             if (s === 'pending' || s === 'processing_partial_items') return 'border-l-4 border-red-500 bg-red-50';
             if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped', 'completed_incomplete', 'novelty_review'].includes(s)) return 'border-l-4 border-yellow-500 bg-yellow-50';
@@ -1163,13 +1170,21 @@
                     dom.customDateRange.classList.toggle('hidden', dom.reportTimeRange.value !== 'custom');
                 });
             }
+
+            // ==================== BLOQUE CORREGIDO (INICIO) ====================
+            // Se añadió el listener que faltaba para el botón "Generar Informe".
+            if (dom.generateReportBtn) {
+                dom.generateReportBtn.addEventListener('click', handleReportGeneration);
+            }
+            // ==================== BLOQUE CORREGIDO (FIN) ====================
+
             const exportPdfBtn = document.getElementById('exportPdfBtn');
             if (exportPdfBtn) {
                 exportPdfBtn.addEventListener('click', exportReportToPdf);
             }
             const exportExcelReportBtn = document.getElementById('exportExcelBtn_report');
             if (exportExcelReportBtn) {
-                // Reutilizamos la función de exportar a Excel que ya tienes
+                // Aquí se puede usar una función específica para exportar el reporte si es diferente del historial
                 exportExcelReportBtn.addEventListener('click', exportHistoryToExcel); 
             }
 
@@ -1184,17 +1199,16 @@
             charts = {};
         }
 
-                function handleReportGeneration() {
+        function handleReportGeneration() {
             const timeRange = dom.reportTimeRange.value;
             let endDate = new Date();
-            endDate.setHours(23, 59, 59, 999); // Final del día actual
+            endDate.setHours(23, 59, 59, 999);
             let startDate = new Date();
 
             if (timeRange === 'today') {
-                startDate.setHours(0, 0, 0, 0); // Inicio del día actual
+                startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'this_week') {
                 const day = startDate.getDay();
-                // Ajuste para que la semana empiece en Lunes (1) y termine en Domingo (0)
                 const diff = startDate.getDate() - day + (day === 0 ? -6 : 1); 
                 startDate = new Date(startDate.setDate(diff));
                 startDate.setHours(0, 0, 0, 0);
@@ -1210,14 +1224,13 @@
                     alert("Por favor, selecciona un rango de fechas personalizado.");
                     return;
                 }
-                // Asegurar que las fechas personalizadas se interpreten correctamente
                 startDate = new Date(dom.reportDateFrom.value + 'T00:00:00');
                 endDate = new Date(dom.reportDateTo.value + 'T23:59:59');
             }
 
             const filteredRequests = allTransferRequests.filter(req => {
                 if (!req.timestamp || typeof req.timestamp.toDate !== 'function') {
-                    return false; // Ignorar solicitudes sin timestamp válido
+                    return false;
                 }
                 const reqDate = req.timestamp.toDate();
                 return reqDate >= startDate && reqDate <= endDate;
@@ -1226,6 +1239,8 @@
             if (filteredRequests.length === 0) {
                 alert("No se encontraron datos para el rango de fechas seleccionado.");
                 dom.reportResults.style.display = 'none';
+                document.getElementById('exportPdfBtn').style.display = 'none';
+                document.getElementById('exportExcelBtn_report').style.display = 'none';
                 return;
             }
 
