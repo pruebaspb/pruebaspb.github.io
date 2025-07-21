@@ -1205,61 +1205,66 @@
             options: chartOptions
         });
     }
-
-            async function downloadPdfReport() {
+                async function downloadPdfReport() {
             const reportElement = dom.reportContent;
 
-            // 1. Clonar el elemento para no modificar el original visible.
+            // 1. Clonar el elemento.
             const clone = reportElement.cloneNode(true);
-            
-            // 2. Aplicar estilos al clon para que sea "amigable" con el PDF.
-            // Se posiciona fuera de la pantalla para que no sea visible.
-            clone.style.position = 'absolute';
-            clone.style.left = '-9999px';
-            clone.style.top = '-9999px';
-            clone.style.width = '210mm'; // Ancho estándar A4
-            clone.style.padding = '20px'; // Añadir un poco de padding
-            clone.style.backgroundColor = 'white'; // Asegurar fondo blanco
 
+            // 2. Preparar un contenedor para el clon. Este contenedor lo aislará
+            // y lo hará invisible para el usuario, pero renderizable para html2pdf.
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.position = 'fixed';
+            pdfContainer.style.top = '0';
+            pdfContainer.style.left = '0';
+            pdfContainer.style.width = '100%';
+            pdfContainer.style.height = '100%';
+            pdfContainer.style.zIndex = '-1'; // Ponerlo detrás de todo
+            pdfContainer.style.opacity = '0'; // Hacerlo invisible
+            pdfContainer.style.overflow = 'hidden'; // Evitar scrolls indeseados
+
+            // Estilos para el clon dentro del contenedor
+            clone.style.width = '210mm'; // Ancho A4
+            clone.style.backgroundColor = 'white';
+            clone.style.border = '1px solid #ccc'; // Borde para asegurar que tiene dimensiones
+            
             // Forzar a los contenedores de los gráficos a ser bloques
             const chartContainers = clone.querySelectorAll('.grid > div');
             chartContainers.forEach(container => {
                 container.style.display = 'block';
                 container.style.width = '100%';
-                container.style.pageBreakInside = 'avoid'; // Evitar que un gráfico se corte entre páginas
+                container.style.pageBreakInside = 'avoid';
                 container.style.marginBottom = '20px';
             });
             
-            // Forzar al contenedor principal de los gráficos a no ser un grid
-             const gridContainer = clone.querySelector('.grid.grid-cols-1');
+            const gridContainer = clone.querySelector('.grid.grid-cols-1');
             if(gridContainer){
                 gridContainer.style.display = 'block';
             }
 
-            // Añadir el clon al cuerpo del documento para que html2pdf lo pueda "ver".
-            document.body.appendChild(clone);
+            // Añadir el clon al contenedor, y el contenedor al body.
+            pdfContainer.appendChild(clone);
+            document.body.appendChild(pdfContainer);
 
             const today = new Date().toISOString().slice(0, 10);
             const opt = {
-                margin: [5, 5, 5, 5], // Márgenes en mm [arriba, izquierda, abajo, derecha]
-                filename: `Informe_Gerencial_${today}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true,
-                    logging: true, // Útil para depurar
-                    onrendered: function(canvas) {
-                        // Limpieza después de renderizar si es necesario
-                    }
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                margin:       [10, 5, 10, 5], // Márgenes en mm
+                filename:     `Informe_Gerencial_${today}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             // 3. Generar el PDF desde el clon.
-            await html2pdf().from(clone).set(opt).save();
-            
-            // 4. Eliminar el clon del DOM.
-            document.body.removeChild(clone);
+            try {
+                await html2pdf().from(clone).set(opt).save();
+            } catch (error) {
+                console.error("Error al generar el PDF:", error);
+                alert("Ocurrió un error al generar el PDF. Revisa la consola para más detalles.");
+            } finally {
+                // 4. Eliminar el contenedor (y su clon hijo) del DOM.
+                document.body.removeChild(pdfContainer);
+            }
         }
 
     function exportManagerReport() {
