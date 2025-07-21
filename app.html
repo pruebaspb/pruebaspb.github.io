@@ -1208,7 +1208,31 @@
                 async function downloadPdfReport() {
             const reportElement = dom.reportContent;
 
-            // 1. Clonar y preparar el contenedor invisible
+            // 1. Clonar el elemento original
+            const clone = reportElement.cloneNode(true);
+
+            // 2. Convertir cada gráfico del *documento original* a una imagen
+            //    y reemplazar el canvas correspondiente en el *clon* con esa imagen.
+            for (const id in charts) {
+                const originalCanvas = document.getElementById(id); // Obtener el canvas original, visible
+                const clonedCanvas = clone.querySelector(`#${id}`);   // Obtener el canvas del clon
+
+                if (originalCanvas && clonedCanvas) {
+                    // Convertir el contenido del canvas original a una imagen Data URL
+                    const imageUrl = originalCanvas.toDataURL('image/png');
+                    
+                    // Crear un nuevo elemento de imagen
+                    const img = new Image();
+                    img.src = imageUrl;
+                    img.style.width = '100%'; // Asegurarse de que la imagen ocupe el espacio
+                    img.style.height = 'auto';
+
+                    // Reemplazar el <canvas> vacío del clon por el <img> con el gráfico
+                    clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+                }
+            }
+
+            // 3. Preparar el contenedor invisible para el clon ya modificado
             const pdfContainer = document.createElement('div');
             pdfContainer.style.position = 'fixed';
             pdfContainer.style.top = '0';
@@ -1219,59 +1243,42 @@
             pdfContainer.style.opacity = '0';
             pdfContainer.style.overflow = 'hidden';
 
-            const clone = reportElement.cloneNode(true);
             clone.style.width = '210mm';
             clone.style.backgroundColor = 'white';
-            clone.style.border = '1px solid #ccc';
-
-            const chartContainers = clone.querySelectorAll('.grid > div');
-            chartContainers.forEach(container => {
-                container.style.display = 'block';
-                container.style.width = '100%';
-                container.style.pageBreakInside = 'avoid';
-                container.style.marginBottom = '20px';
-            });
             
-            const gridContainer = clone.querySelector('.grid.grid-cols-1');
-            if(gridContainer) gridContainer.style.display = 'block';
+            // Aplicar estilos para el paginado correcto
+            const sections = clone.querySelectorAll('#reportContent > div, #reportContent > hr');
+            sections.forEach(section => {
+                 section.style.pageBreakInside = 'avoid';
+            });
+            const chartWrappers = clone.querySelectorAll('.grid > div');
+             chartWrappers.forEach(wrapper => {
+                wrapper.style.pageBreakInside = 'avoid';
+                wrapper.style.display = 'block'; // Asegurar que no usen grid
+             });
+
 
             pdfContainer.appendChild(clone);
             document.body.appendChild(pdfContainer);
-
-            // 2. Re-renderizar los gráficos en los nuevos canvas del clon
-            const chartIds = Object.keys(charts);
-            chartIds.forEach(id => {
-                const originalChart = charts[id];
-                const newCanvas = clone.querySelector(`#${id}`);
-                if (newCanvas && originalChart) {
-                    // Crear una nueva instancia del gráfico en el canvas clonado
-                    // usando la configuración del gráfico original.
-                    new Chart(newCanvas, {
-                        ...originalChart.config
-                    });
-                }
-            });
-
-            // 3. Esperar un momento para que los gráficos se dibujen completamente
-            await new Promise(resolve => setTimeout(resolve, 500)); 
-
+            
             // 4. Configurar y generar el PDF
             const today = new Date().toISOString().slice(0, 10);
             const opt = {
                 margin:       [10, 5, 10, 5],
                 filename:     `Informe_Gerencial_${today}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, allowTaint: true },
+                html2canvas:  { scale: 2, useCORS: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             try {
+                // Ya no necesitamos esperar, porque las imágenes son estáticas
                 await html2pdf().from(clone).set(opt).save();
             } catch (error) {
                 console.error("Error al generar el PDF:", error);
                 alert("Ocurrió un error al generar el PDF.");
             } finally {
-                // 5. Limpieza: eliminar el contenedor del DOM
+                // 5. Limpieza
                 document.body.removeChild(pdfContainer);
             }
         }
