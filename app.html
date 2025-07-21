@@ -1206,18 +1206,61 @@
         });
     }
 
-    async function downloadPdfReport() {
-        const reportElement = dom.reportContent;
-        const today = new Date().toISOString().slice(0, 10);
-        const opt = {
-            margin: 0.5, filename: `Informe_Gerencial_${today}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-        await new Promise(resolve => setTimeout(resolve, 500)); 
-        html2pdf().from(reportElement).set(opt).save();
-    }
+            async function downloadPdfReport() {
+            const reportElement = dom.reportContent;
+
+            // 1. Clonar el elemento para no modificar el original visible.
+            const clone = reportElement.cloneNode(true);
+            
+            // 2. Aplicar estilos al clon para que sea "amigable" con el PDF.
+            // Se posiciona fuera de la pantalla para que no sea visible.
+            clone.style.position = 'absolute';
+            clone.style.left = '-9999px';
+            clone.style.top = '-9999px';
+            clone.style.width = '210mm'; // Ancho estándar A4
+            clone.style.padding = '20px'; // Añadir un poco de padding
+            clone.style.backgroundColor = 'white'; // Asegurar fondo blanco
+
+            // Forzar a los contenedores de los gráficos a ser bloques
+            const chartContainers = clone.querySelectorAll('.grid > div');
+            chartContainers.forEach(container => {
+                container.style.display = 'block';
+                container.style.width = '100%';
+                container.style.pageBreakInside = 'avoid'; // Evitar que un gráfico se corte entre páginas
+                container.style.marginBottom = '20px';
+            });
+            
+            // Forzar al contenedor principal de los gráficos a no ser un grid
+             const gridContainer = clone.querySelector('.grid.grid-cols-1');
+            if(gridContainer){
+                gridContainer.style.display = 'block';
+            }
+
+            // Añadir el clon al cuerpo del documento para que html2pdf lo pueda "ver".
+            document.body.appendChild(clone);
+
+            const today = new Date().toISOString().slice(0, 10);
+            const opt = {
+                margin: [5, 5, 5, 5], // Márgenes en mm [arriba, izquierda, abajo, derecha]
+                filename: `Informe_Gerencial_${today}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true,
+                    logging: true, // Útil para depurar
+                    onrendered: function(canvas) {
+                        // Limpieza después de renderizar si es necesario
+                    }
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // 3. Generar el PDF desde el clon.
+            await html2pdf().from(clone).set(opt).save();
+            
+            // 4. Eliminar el clon del DOM.
+            document.body.removeChild(clone);
+        }
 
     function exportManagerReport() {
         if (lastFilteredRequests.length === 0) {
