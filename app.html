@@ -10,9 +10,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="container mx-auto p-4 md:p-8">
@@ -31,7 +30,7 @@
                 </button>
             </div>
         </header>
-
+        
         <!-- VISTA DE SOLICITANTE -->
         <div id="requesterView" class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" style="display: none;">
             <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
@@ -158,29 +157,22 @@
         </div>
         
         <!-- VISTA GERENCIAL -->
-        <!-- ==================== BLOQUE CORREGIDO (INICIO) ==================== -->
-        <!-- Se corrigió la estructura HTML anidada que rompía el diseño. -->
         <div id="managerView" class="space-y-8" style="display: none;">
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Panel de Informes Gerenciales</h2>
-                
-                <!-- Controles del Informe (Estructura corregida) -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                    
-                    <!-- Selector de Rango de Tiempo -->
-                    <div class="md:col-span-1">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                    <div class="lg:col-span-2">
                         <label for="reportTimeRange" class="block text-sm font-medium text-gray-700">Rango de Tiempo</label>
                         <select id="reportTimeRange" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
                             <option value="today">Hoy</option>
                             <option value="this_week">Esta Semana</option>
                             <option value="this_month" selected>Este Mes</option>
                             <option value="last_3_months">Últimos 3 Meses</option>
+                            <option value="all_time">Todo el Historial</option>
                             <option value="custom">Personalizado</option>
                         </select>
                     </div>
-        
-                    <!-- Selector de Fechas Personalizado (se muestra con JS) -->
-                    <div id="customDateRange" class="md:col-span-2 grid grid-cols-2 gap-4 hidden">
+                    <div id="customDateRange" class="lg:col-span-2 grid grid-cols-2 gap-4 hidden">
                         <div>
                             <label for="reportDateFrom" class="block text-sm font-medium text-gray-700">Desde</label>
                             <input type="date" id="reportDateFrom" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
@@ -190,57 +182,40 @@
                             <input type="date" id="reportDateTo" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm">
                         </div>
                     </div>
-        
-                    <!-- Botón de Generar Informe -->
-                    <div class="md:col-span-1">
+                    <div class="lg:col-span-1">
                         <button id="generateReportBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">Generar Informe</button>
                     </div>
                 </div>
-                
-                <!-- Botones de Exportar (aparecerán aquí después de generar el informe) -->
-                <div class="mt-6 flex gap-x-4">
-                     <button id="exportPdfBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg" style="display: none;">Exportar PDF</button>
-                     <button id="exportExcelBtn_report" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg" style="display: none;">Exportar Excel</button>
-                </div>
             </div>
 
-            <div id="reportResults" class="space-y-8" style="display: none;">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Total Solicitudes</h3><p id="kpiTotalRequests" class="mt-1 text-3xl font-semibold text-gray-900">-</p></div>
-                    <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Completadas</h3><p id="kpiCompleted" class="mt-1 text-3xl font-semibold text-green-600">-</p></div>
-                    <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Con Novedad</h3><p id="kpiWithNovelty" class="mt-1 text-3xl font-semibold text-yellow-600">-</p></div>
-                    <div class="bg-white p-4 rounded-xl shadow-lg"><h3 class="text-sm font-medium text-gray-500">Canceladas</h3><p id="kpiCancelled" class="mt-1 text-3xl font-semibold text-red-600">-</p></div>
+            <div id="reportContainer" style="display: none;">
+                <div id="reportContent" class="bg-white p-8 space-y-8 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <h2 class="text-3xl font-bold text-gray-800">Informe Gerencial de Traslados</h2>
+                        <p id="reportDateSubtitle" class="text-gray-500 mt-1">Generado el: -</p>
+                    </div>
+                    <hr>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <div><h3 class="text-gray-500">Total Solicitudes</h3><p id="kpiTotalRequests" class="text-2xl font-bold text-gray-900">-</p></div>
+                        <div><h3 class="text-gray-500">Completadas</h3><p id="kpiCompleted" class="text-2xl font-bold text-green-600">-</p></div>
+                        <div><h3 class="text-gray-500">Con Novedad</h3><p id="kpiWithNovelty" class="text-2xl font-bold text-yellow-600">-</p></div>
+                        <div><h3 class="text-gray-500">Canceladas</h3><p id="kpiCancelled" class="text-2xl font-bold text-red-600">-</p></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8">
+                        <div class="col-span-2 lg:col-span-1"><h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Estado de Solicitudes</h3><canvas id="statusChart"></canvas></div>
+                        <div class="col-span-2 lg:col-span-1"><h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Top 5 Productos Más Solicitados</h3><canvas id="topProductsChart"></canvas></div>
+                        <div class="col-span-2 lg:col-span-1"><h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Volumen por Bodega Destino</h3><canvas id="warehouseChart"></canvas></div>
+                        <div class="col-span-2 lg:col-span-1"><h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Tasa de Cumplimiento (Unidades)</h3><canvas id="fulfillmentChart"></canvas></div>
+                        <!-- NUEVO GRÁFICO AQUÍ -->
+                        <div class="col-span-2 lg:col-span-1"><h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Unidades Solicitadas vs. Enviadas</h3><canvas id="requestedVsSentChart"></canvas></div>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Estado de Solicitudes</h3>
-                        <div class="relative flex-grow">
-                            <canvas id="statusChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top 5 Productos Más Solicitados</h3>
-                        <div class="relative flex-grow">
-                            <canvas id="topProductsChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Volumen por Bodega Destino</h3>
-                        <div class="relative flex-grow">
-                            <canvas id="warehouseChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-white p-6 rounded-xl shadow-lg h-96 flex flex-col">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Tasa de Cumplimiento (Unidades)</h3>
-                        <p class="text-sm text-gray-500 -mt-2 mb-4">(Enviadas vs. Recibidas en traslados finalizados)</p>
-                        <div class="relative flex-grow">
-                            <canvas id="fulfillmentChart"></canvas>
-                        </div>
-                    </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button id="exportManagerReportBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center space-x-2"><span>Exportar a Excel</span></button>
+                    <button id="downloadPdfBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center space-x-2"><span>Descargar como PDF</span></button>
                 </div>
             </div>
         </div>
-        <!-- ==================== BLOQUE CORREGIDO (FIN) ==================== -->
     </div>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -271,6 +246,7 @@
         // --- ESTADO GLOBAL DE LA APLICACIÓN ---
         let allProducts = [], currentTransferItems = [], allTransferRequests = [], currentUserData = null;
         let charts = {};
+        let lastFilteredRequests = [];
         const expandedRequestsState = new Set();
         const sectionDisplayCounts = {};
         const INITIAL_DISPLAY_COUNT = 2;
@@ -330,7 +306,9 @@
             reportDateFrom: document.getElementById('reportDateFrom'),
             reportDateTo: document.getElementById('reportDateTo'),
             generateReportBtn: document.getElementById('generateReportBtn'),
-            reportResults: document.getElementById('reportResults'),
+            reportContainer: document.getElementById('reportContainer'),
+            reportContent: document.getElementById('reportContent'),
+            reportDateSubtitle: document.getElementById('reportDateSubtitle'),
             kpiTotalRequests: document.getElementById('kpiTotalRequests'),
             kpiCompleted: document.getElementById('kpiCompleted'),
             kpiWithNovelty: document.getElementById('kpiWithNovelty'),
@@ -338,104 +316,18 @@
             statusChart: document.getElementById('statusChart'),
             topProductsChart: document.getElementById('topProductsChart'),
             warehouseChart: document.getElementById('warehouseChart'),
-            fulfillmentChart: document.getElementById('fulfillmentChart')
+            fulfillmentChart: document.getElementById('fulfillmentChart'),
+            requestedVsSentChart: document.getElementById('requestedVsSentChart'), // Nuevo
+            exportManagerReportBtn: document.getElementById('exportManagerReportBtn'),
+            downloadPdfBtn: document.getElementById('downloadPdfBtn')
         };
-
-        // --- FUNCIONES AUXILIARES ---
-                function exportReportToPdf() {
-            const reportDiv = document.getElementById('reportResults');
-            const pdfButton = document.getElementById('exportPdfBtn');
-            const excelButton = document.getElementById('exportExcelBtn_report');
-
-            // 1. Ocultar botones para que no salgan en la captura
-            pdfButton.style.display = 'none';
-            excelButton.style.display = 'none';
-
-            // 2. Crear un contenedor temporal para el diseño del PDF
-            const pdfContainer = document.createElement('div');
-            pdfContainer.style.position = 'absolute';
-            pdfContainer.style.left = '0';
-            pdfContainer.style.top = '0';
-            pdfContainer.style.width = '1200px'; // Ancho fijo para consistencia
-            pdfContainer.style.padding = '40px';
-            pdfContainer.style.backgroundColor = 'white';
-            pdfContainer.style.fontFamily = 'Helvetica, Arial, sans-serif';
-
-            // 3. Crear el encabezado del PDF
-            const header = document.createElement('div');
-            header.style.display = 'flex';
-            header.style.justifyContent = 'space-between';
-            header.style.alignItems = 'center';
-            header.style.borderBottom = '2px solid #e5e7eb';
-            header.style.paddingBottom = '20px';
-            header.style.marginBottom = '30px';
-
-            const logoImg = document.createElement('img');
-            logoImg.src = 'https://parabarberos.github.io/2.jpg';
-            logoImg.style.width = '100px';
-            logoImg.style.height = '100px';
-            logoImg.style.borderRadius = '50%';
-
-
-            const titleDiv = document.createElement('div');
-            titleDiv.style.textAlign = 'right';
-
-            const titleH1 = document.createElement('h1');
-            titleH1.innerText = 'Informe Gerencial de Traslados';
-            titleH1.style.margin = '0';
-            titleH1.style.fontSize = '28px';
-            titleH1.style.color = '#111827';
-
-            const dateP = document.createElement('p');
-            dateP.innerText = `Generado el: ${new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}`;
-            dateP.style.margin = '5px 0 0';
-            dateP.style.fontSize = '14px';
-            dateP.style.color = '#6b7280';
-
-            titleDiv.appendChild(titleH1);
-            titleDiv.appendChild(dateP);
-            header.appendChild(logoImg);
-            header.appendChild(titleDiv);
-
-            // 4. Clonar el contenido del reporte
-            const content = reportDiv.cloneNode(true);
-            content.style.display = 'block'; // Asegurarse que el contenido clonado sea visible
-
-            // 5. Ensamblar el contenedor del PDF
-            pdfContainer.appendChild(header);
-            pdfContainer.appendChild(content);
-
-            // Añadir el contenedor temporal al cuerpo para que se pueda renderizar
-            document.body.appendChild(pdfContainer);
-
-            // 6. Generar el PDF desde el contenedor temporal
-            html2canvas(pdfContainer, { 
-                scale: 2,
-                useCORS: true
-            }).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('l', 'mm', 'a4'); // 'l' para landscape (horizontal)
-                
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                pdf.save("Informe_Gerencial_Traslados.pdf");
-
-                // 7. Limpieza: Eliminar el contenedor temporal y restaurar botones
-                document.body.removeChild(pdfContainer);
-                pdfButton.style.display = 'block';
-                excelButton.style.display = 'block';
-
-            }).catch(err => {
-                console.error("Error al generar el PDF:", err);
-                // Asegurarse de restaurar todo incluso si hay un error
-                document.body.removeChild(pdfContainer);
-                pdfButton.style.display = 'block';
-                excelButton.style.display = 'block';
-            });
-        }
+        
+        // --- CÓDIGO RESTANTE (SIN CAMBIOS HASTA LLEGAR A LA LÓGICA DE INFORMES) ---
+        // ...
+        // ... (Pega aquí todo tu código desde getRequestStatusColor hasta el inicio de la lógica de informes) ...
+        // ...
+        
+        // --- FUNCIONES AUXILIARES: ESTADOS Y COLORES ---
         const getRequestStatusColor = (s) => {
             if (s === 'pending' || s === 'processing_partial_items') return 'border-l-4 border-red-500 bg-red-50';
             if (['pending_nt_start', 'pending_nt_active', 'ready_to_ship', 'shipping_details', 'shipped', 'completed_incomplete', 'novelty_review'].includes(s)) return 'border-l-4 border-yellow-500 bg-yellow-50';
@@ -481,11 +373,11 @@
             dom.reviewerView.style.display = 'none';
             dom.managerView.style.display = 'none';
             if (dom.productManagementCard) dom.productManagementCard.style.display = 'none';
-            if (dom.reportResults) dom.reportResults.style.display = 'none';
+            if (dom.reportContainer) dom.reportContainer.style.display = 'none';
 
             if (role === 'admin') {
-                dom.adminView.style.display = 'block'; // Muestra la vista de administración
-                dom.managerView.style.display = 'block'; // Muestra TAMBIÉN la vista de gerencia/reportes
+                dom.adminView.style.display = 'block';
+                dom.managerView.style.display = 'block';
                 if (dom.productManagementCard) dom.productManagementCard.style.display = 'block';
             } else if (role === 'reviewer') {
                 dom.reviewerView.style.display = 'block';
@@ -1148,50 +1040,46 @@
             return Array.from(productsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
         }
 
-        function exportHistoryToExcel() {
-            const historyRequests = allTransferRequests.filter(r => r.status.startsWith('completed') || r.status === 'cancelled');
-            if (historyRequests.length === 0) { alert("No hay datos en historial."); return; }
+        function exportManagerReport() {
+            if (lastFilteredRequests.length === 0) {
+                alert("Primero genera un resumen para poder exportar los datos.");
+                return;
+            }
+            
             let excelData = [];
-            historyRequests.forEach(req => {
+            lastFilteredRequests.forEach(req => {
                 const creationDate = req.timestamp ? new Date(req.timestamp.seconds * 1000).toLocaleString('es-CO') : 'N/A';
                 if (req.items && req.items.length > 0) {
                     req.items.forEach(item => {
                         excelData.push({ 
                             'ID Traslado': req.id, 'Estado': translateStatus(req.status, req), 'Fecha Creación': creationDate, 
-                            'Solicitante': req.requesterName, 'Bodega Destino': req.toWarehouse, 
+                            'Solicitante': req.requesterName, 'Bodega Origen': req.fromWarehouse, 'Bodega Destino': req.toWarehouse, 
                             'ID Producto': item.productId, 'Nombre Producto': item.productName, 
                             'U. Solicitadas': item.quantity, 'U. Enviadas': item.sentQuantity, 'U. Recibidas': item.receivedQuantity, 
-                            'Nota Solicitante': req.requesterNotes || '', 'Obs. Admin': req.adminNotes || '', 'Obs. Recepción': req.reception?.notes || '',
-                            'Causa Novedad': req.novelty?.reason || '', 'Solución Novedad': req.novelty?.solution || ''
+                            'Diferencia': (item.receivedQuantity ?? 0) - (item.sentQuantity ?? 0),
+                            'Nota Solicitante': req.requesterNotes || '', 'Nota Admin': req.adminNotes || '', 'Nº NT': req.ntNumber || ''
                         });
                     });
                 } else {
-                    excelData.push({ 'ID Traslado': req.id, 'Estado': translateStatus(req.status, req), 'Fecha Creación': creationDate, 'Solicitante': req.requesterName, 'Bodega Destino': req.toWarehouse, 'ID Producto': 'N/A', 'Nombre Producto': 'Sin items', 'U. Solicitadas': 0, 'U. Enviadas': 0, 'U. Recibidas': 0, 'Nota Solicitante': req.requesterNotes || '', 'Obs. Admin': req.adminNotes || '', 'Obs. Recepción': req.reception?.notes || '', 'Causa Novedad': '', 'Solución Novedad': '' });
+                    excelData.push({ 
+                        'ID Traslado': req.id, 'Estado': translateStatus(req.status, req), 'Fecha Creación': creationDate, 
+                        'Solicitante': req.requesterName, 'Bodega Origen': req.fromWarehouse, 'Bodega Destino': req.toWarehouse, 
+                        'ID Producto': 'N/A', 'Nombre Producto': 'Sin items', 
+                        'U. Solicitadas': 0, 'U. Enviadas': 0, 'U. Recibidas': 0, 'Diferencia': 0,
+                        'Nota Solicitante': req.requesterNotes || '', 'Nota Admin': req.adminNotes || '', 'Nº NT': req.ntNumber || ''
+                    });
                 }
             });
+
             const worksheet = XLSX.utils.json_to_sheet(excelData);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Historial");
-            worksheet['!cols'] = [ { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 50 }, { wch: 50 }, { wch: 50 }, { wch: 30 }, { wch: 50 } ];
-            XLSX.writeFile(workbook, "Historial_Traslados_Parabarberos.xlsx");
+            XLSX.utils.book_append_sheet(workbook, worksheet, "InformeGerencial");
+            worksheet['!cols'] = [ { wch: 15 }, { wch: 30 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 20 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 50 }, { wch: 50 }, { wch: 20 }];
+            
+            const today = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(workbook, `Informe_Gerencial_Traslados_${today}.xlsx`);
         }
         
-        function renderProducts(productsToRender) {
-            dom.productList.innerHTML = '';
-            if (!productsToRender || productsToRender.length === 0) {
-                dom.productList.innerHTML = '<p class="text-gray-500 col-span-full text-center">No se encontraron productos.</p>';
-                return;
-            }
-            productsToRender.forEach(product => {
-                const card = document.createElement('div');
-                card.className = 'border p-3 rounded-lg shadow-sm hover:shadow-md transition bg-white';
-                const safeId = product.id.replace(/[^a-zA-Z0-9-_]/g, '');
-                card.innerHTML = `<h3 class="text-sm font-semibold text-gray-900" title="${product.description}">${product.name.length > 50 ? product.name.substring(0, 47) + '...' : product.name}</h3><p class="text-xs text-gray-400 mb-2">ID: ${product.id}</p><div class="flex items-center space-x-2 mt-auto"><input type="number" min="1" value="1" id="qty-${safeId}" class="w-16 border-gray-300 rounded-md text-center p-1"><button data-product-id="${product.id}" class="add-to-transfer-btn w-full bg-gray-800 hover:bg-black text-white text-xs font-bold py-2 px-2 rounded-md transition">Añadir</button></div>`;
-                dom.productList.appendChild(card);
-            });
-            dom.productList.querySelectorAll('.add-to-transfer-btn').forEach(b => b.onclick = handleAddToTransfer);
-        }
-
         async function initializeApp() {
             setupUIForUser();
             allProducts = await loadAndTransformProducts();
@@ -1222,33 +1110,28 @@
                     element.addEventListener('input', renderAllSections);
                 }
             });
-            
+
             if (dom.reportTimeRange) {
                 dom.reportTimeRange.addEventListener('change', () => {
                     dom.customDateRange.classList.toggle('hidden', dom.reportTimeRange.value !== 'custom');
                 });
             }
-
-            // ==================== BLOQUE CORREGIDO (INICIO) ====================
-            // Se añadió el listener que faltaba para el botón "Generar Informe".
             if (dom.generateReportBtn) {
                 dom.generateReportBtn.addEventListener('click', handleReportGeneration);
             }
-            // ==================== BLOQUE CORREGIDO (FIN) ====================
-
-            const exportPdfBtn = document.getElementById('exportPdfBtn');
-            if (exportPdfBtn) {
-                exportPdfBtn.addEventListener('click', exportReportToPdf);
+            if (dom.exportManagerReportBtn) {
+                dom.exportManagerReportBtn.addEventListener('click', exportManagerReport);
             }
-            const exportExcelReportBtn = document.getElementById('exportExcelBtn_report');
-            if (exportExcelReportBtn) {
-                // Aquí se puede usar una función específica para exportar el reporte si es diferente del historial
-                exportExcelReportBtn.addEventListener('click', exportHistoryToExcel); 
+            if (dom.downloadPdfBtn) {
+                dom.downloadPdfBtn.addEventListener('click', downloadPdfReport);
             }
 
             transfersCollection.orderBy("timestamp", "desc").onSnapshot(snapshot => {
                 allTransferRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderAllSections();
+                if (currentUserData.role === 'manager') {
+                    handleReportGeneration();
+                }
             }, error => console.error("Error al conectar: ", error));
         }
 
@@ -1262,9 +1145,10 @@
             let endDate = new Date();
             endDate.setHours(23, 59, 59, 999);
             let startDate = new Date();
+            startDate.setHours(0, 0, 0, 0);
 
-            if (timeRange === 'today') {
-                startDate.setHours(0, 0, 0, 0);
+            if (timeRange === 'all_time') {
+                startDate = new Date(0);
             } else if (timeRange === 'this_week') {
                 const day = startDate.getDay();
                 const diff = startDate.getDate() - day + (day === 0 ? -6 : 1); 
@@ -1272,11 +1156,9 @@
                 startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'this_month') {
                 startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
-                startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'last_3_months') {
                 startDate = new Date();
                 startDate.setMonth(startDate.getMonth() - 3);
-                startDate.setHours(0, 0, 0, 0);
             } else if (timeRange === 'custom') {
                 if (!dom.reportDateFrom.value || !dom.reportDateTo.value) {
                     alert("Por favor, selecciona un rango de fechas personalizado.");
@@ -1286,34 +1168,33 @@
                 endDate = new Date(dom.reportDateTo.value + 'T23:59:59');
             }
 
-            const filteredRequests = allTransferRequests.filter(req => {
-                if (!req.timestamp || typeof req.timestamp.toDate !== 'function') {
-                    return false;
-                }
+            lastFilteredRequests = allTransferRequests.filter(req => {
+                if (!req.timestamp?.toDate) return false;
                 const reqDate = req.timestamp.toDate();
                 return reqDate >= startDate && reqDate <= endDate;
             });
 
-            if (filteredRequests.length === 0) {
+            if (lastFilteredRequests.length === 0) {
                 alert("No se encontraron datos para el rango de fechas seleccionado.");
-                dom.reportResults.style.display = 'none';
-                document.getElementById('exportPdfBtn').style.display = 'none';
-                document.getElementById('exportExcelBtn_report').style.display = 'none';
+                dom.reportContainer.style.display = 'none';
                 return;
             }
 
-            dom.reportResults.style.display = 'block';
-            document.getElementById('exportPdfBtn').style.display = 'block';
-            document.getElementById('exportExcelBtn_report').style.display = 'block';
+            dom.reportContainer.style.display = 'block';
             destroyCharts();
-            generateAllReports(filteredRequests);
+            generateAllReports(lastFilteredRequests);
         }
 
         function generateAllReports(data) {
+            const today = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+            dom.reportDateSubtitle.textContent = `Generado el: ${today}`;
+            
             dom.kpiTotalRequests.textContent = data.length;
             dom.kpiCompleted.textContent = data.filter(r => r.status.startsWith('completed')).length;
             dom.kpiWithNovelty.textContent = data.filter(r => r.status === 'completed_incomplete' || r.status === 'novelty_review').length;
             dom.kpiCancelled.textContent = data.filter(r => r.status === 'cancelled').length;
+
+            const chartOptions = { responsive: true, maintainAspectRatio: false };
 
             const statusCounts = data.reduce((acc, req) => {
                 const status = translateStatus(req.status, req);
@@ -1322,7 +1203,7 @@
             }, {});
             charts.statusChart = new Chart(dom.statusChart, {
                 type: 'doughnut', data: { labels: Object.keys(statusCounts), datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#22c55e', '#ef4444', '#f59e0b', '#3b82f6', '#6b7280', '#8b5cf6', '#f97316', '#06b6d4'] }] },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: chartOptions
             });
 
             const productCounts = data.reduce((acc, req) => {
@@ -1332,7 +1213,7 @@
             const sortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
             charts.topProductsChart = new Chart(dom.topProductsChart, {
                 type: 'bar', data: { labels: sortedProducts.map(p => p[0]), datasets: [{ label: 'Unidades Solicitadas', data: sortedProducts.map(p => p[1]), backgroundColor: '#1f2937' }] },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                options: { ...chartOptions, indexAxis: 'y', plugins: { legend: { display: false } } }
             });
 
             const warehouseCounts = data.reduce((acc, req) => {
@@ -1341,7 +1222,7 @@
             }, {});
             charts.warehouseChart = new Chart(dom.warehouseChart, {
                 type: 'pie', data: { labels: Object.keys(warehouseCounts), datasets: [{ data: Object.values(warehouseCounts), backgroundColor: ['#1d4ed8', '#059669', '#d97706', '#dc2626', '#6d28d9', '#db2777'] }] },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: chartOptions
             });
             
             const fulfillmentData = data.filter(r => r.status.startsWith('completed')).reduce((acc, req) => {
@@ -1352,12 +1233,27 @@
                 return acc;
             }, { sent: 0, received: 0 });
             charts.fulfillmentChart = new Chart(dom.fulfillmentChart, {
-                type: 'bar', data: { labels: ['Cumplimiento de Unidades'], datasets: [
+                type: 'bar', data: { labels: ['Cumplimiento'], datasets: [
                     { label: 'Unidades Enviadas', data: [fulfillmentData.sent], backgroundColor: '#a8a29e' },
                     { label: 'Unidades Recibidas', data: [fulfillmentData.received], backgroundColor: '#16a34a' }
                 ]},
-                options: { responsive: true, maintainAspectRatio: false }
+                options: chartOptions
             });
+        }
+
+        async function downloadPdfReport() {
+            const reportElement = dom.reportContent;
+            const today = new Date().toISOString().slice(0, 10);
+            const opt = {
+                margin: 0.5, filename: `Informe_Gerencial_${today}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: true },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            Chart.defaults.animation = false;
+            Object.values(charts).forEach(chart => chart.update());
+            await new Promise(resolve => setTimeout(resolve, 500)); 
+            html2pdf().from(reportElement).set(opt).save().then(() => { Chart.defaults.animation = true; });
         }
     });
 </script>
