@@ -1208,27 +1208,22 @@
                 async function downloadPdfReport() {
             const reportElement = dom.reportContent;
 
-            // 1. Clonar el elemento.
-            const clone = reportElement.cloneNode(true);
-
-            // 2. Preparar un contenedor para el clon. Este contenedor lo aislará
-            // y lo hará invisible para el usuario, pero renderizable para html2pdf.
+            // 1. Clonar y preparar el contenedor invisible
             const pdfContainer = document.createElement('div');
             pdfContainer.style.position = 'fixed';
             pdfContainer.style.top = '0';
             pdfContainer.style.left = '0';
             pdfContainer.style.width = '100%';
             pdfContainer.style.height = '100%';
-            pdfContainer.style.zIndex = '-1'; // Ponerlo detrás de todo
-            pdfContainer.style.opacity = '0'; // Hacerlo invisible
-            pdfContainer.style.overflow = 'hidden'; // Evitar scrolls indeseados
+            pdfContainer.style.zIndex = '-1';
+            pdfContainer.style.opacity = '0';
+            pdfContainer.style.overflow = 'hidden';
 
-            // Estilos para el clon dentro del contenedor
-            clone.style.width = '210mm'; // Ancho A4
+            const clone = reportElement.cloneNode(true);
+            clone.style.width = '210mm';
             clone.style.backgroundColor = 'white';
-            clone.style.border = '1px solid #ccc'; // Borde para asegurar que tiene dimensiones
-            
-            // Forzar a los contenedores de los gráficos a ser bloques
+            clone.style.border = '1px solid #ccc';
+
             const chartContainers = clone.querySelectorAll('.grid > div');
             chartContainers.forEach(container => {
                 container.style.display = 'block';
@@ -1238,31 +1233,45 @@
             });
             
             const gridContainer = clone.querySelector('.grid.grid-cols-1');
-            if(gridContainer){
-                gridContainer.style.display = 'block';
-            }
+            if(gridContainer) gridContainer.style.display = 'block';
 
-            // Añadir el clon al contenedor, y el contenedor al body.
             pdfContainer.appendChild(clone);
             document.body.appendChild(pdfContainer);
 
+            // 2. Re-renderizar los gráficos en los nuevos canvas del clon
+            const chartIds = Object.keys(charts);
+            chartIds.forEach(id => {
+                const originalChart = charts[id];
+                const newCanvas = clone.querySelector(`#${id}`);
+                if (newCanvas && originalChart) {
+                    // Crear una nueva instancia del gráfico en el canvas clonado
+                    // usando la configuración del gráfico original.
+                    new Chart(newCanvas, {
+                        ...originalChart.config
+                    });
+                }
+            });
+
+            // 3. Esperar un momento para que los gráficos se dibujen completamente
+            await new Promise(resolve => setTimeout(resolve, 500)); 
+
+            // 4. Configurar y generar el PDF
             const today = new Date().toISOString().slice(0, 10);
             const opt = {
-                margin:       [10, 5, 10, 5], // Márgenes en mm
+                margin:       [10, 5, 10, 5],
                 filename:     `Informe_Gerencial_${today}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
+                html2canvas:  { scale: 2, useCORS: true, allowTaint: true },
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // 3. Generar el PDF desde el clon.
             try {
                 await html2pdf().from(clone).set(opt).save();
             } catch (error) {
                 console.error("Error al generar el PDF:", error);
-                alert("Ocurrió un error al generar el PDF. Revisa la consola para más detalles.");
+                alert("Ocurrió un error al generar el PDF.");
             } finally {
-                // 4. Eliminar el contenedor (y su clon hijo) del DOM.
+                // 5. Limpieza: eliminar el contenedor del DOM
                 document.body.removeChild(pdfContainer);
             }
         }
