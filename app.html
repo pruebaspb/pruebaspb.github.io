@@ -1211,78 +1211,76 @@
             // 1. Clonar el elemento original
             const clone = reportElement.cloneNode(true);
 
-            // 2. Convertir cada gráfico del *documento original* a una imagen
-            //    y reemplazar el canvas correspondiente en el *clon* con esa imagen.
+            // 2. Convertir cada gráfico del documento original a una imagen
+            //    y reemplazar el canvas correspondiente en el clon con esa imagen.
             for (const id in charts) {
-                const originalCanvas = document.getElementById(id); // Obtener el canvas original, visible
-                const clonedCanvas = clone.querySelector(`#${id}`);   // Obtener el canvas del clon
+                const originalCanvas = document.getElementById(id);
+                const clonedCanvas = clone.querySelector(`#${id}`);
 
                 if (originalCanvas && clonedCanvas) {
-                    // Convertir el contenido del canvas original a una imagen Data URL
                     const imageUrl = originalCanvas.toDataURL('image/png');
-                    
-                    // Crear un nuevo elemento de imagen
                     const img = new Image();
                     img.src = imageUrl;
-                    img.style.width = '100%'; // Asegurarse de que la imagen ocupe el espacio
+                    img.style.width = '100%';
                     img.style.height = 'auto';
-
-                    // Reemplazar el <canvas> vacío del clon por el <img> con el gráfico
                     clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
                 }
             }
 
-            // 3. Preparar el contenedor invisible para el clon ya modificado
+            // 3. Aplicar estilos de paginación al clon
+            // El primer bloque (KPIs) se quedará en la primera página.
+            // A cada sección de gráfico subsiguiente le forzaremos un salto de página.
+            const chartWrappers = clone.querySelectorAll('.grid > div');
+            chartWrappers.forEach((wrapper, index) => {
+                // Forzar a cada contenedor de gráfico a comportarse como un bloque
+                wrapper.style.display = 'block';
+                wrapper.style.width = '100%';
+                wrapper.style.boxSizing = 'border-box';
+                
+                // Añadir un salto de página ANTES de cada sección de gráfico
+                wrapper.style.pageBreakBefore = 'always';
+                
+                // Añadir un poco de espacio en la parte superior de la nueva página
+                wrapper.style.paddingTop = '15mm'; 
+            });
+            
+            // Asegurarse de que el contenedor principal no sea un grid en el PDF
+            const gridContainer = clone.querySelector('.grid');
+            if(gridContainer) {
+                gridContainer.style.display = 'block';
+            }
+
+            // 4. Preparar el contenedor invisible para el clon
             const pdfContainer = document.createElement('div');
             pdfContainer.style.position = 'fixed';
             pdfContainer.style.top = '0';
-            pdfContainer.style.left = '0';
-            pdfContainer.style.width = '100%';
-            pdfContainer.style.height = '100%';
-            pdfContainer.style.zIndex = '-1';
-            pdfContainer.style.opacity = '0';
-            pdfContainer.style.overflow = 'hidden';
+            pdfContainer.style.left = '-9999px'; // Moverlo fuera de la pantalla es suficiente
+            pdfContainer.style.width = '210mm'; // Darle un ancho definido
 
-            clone.style.width = '210mm';
             clone.style.backgroundColor = 'white';
-            
-            // Aplicar estilos para el paginado correcto
-            const sections = clone.querySelectorAll('#reportContent > div, #reportContent > hr');
-            sections.forEach(section => {
-                 section.style.pageBreakInside = 'avoid';
-            });
-            const chartWrappers = clone.querySelectorAll('.grid > div');
-             chartWrappers.forEach(wrapper => {
-                wrapper.style.pageBreakInside = 'avoid';
-                wrapper.style.display = 'block'; // Asegurar que no usen grid
-             });
-
-
             pdfContainer.appendChild(clone);
             document.body.appendChild(pdfContainer);
-            
-            // 4. Configurar y generar el PDF
+
+            // 5. Configurar y generar el PDF
             const today = new Date().toISOString().slice(0, 10);
             const opt = {
-                margin:       [10, 5, 10, 5],
-                filename:     `Informe_Gerencial_${today}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                margin: 0, // El padding ya lo controlamos nosotros
+                filename: `Informe_Gerencial_${today}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             try {
-                // Ya no necesitamos esperar, porque las imágenes son estáticas
                 await html2pdf().from(clone).set(opt).save();
             } catch (error) {
                 console.error("Error al generar el PDF:", error);
                 alert("Ocurrió un error al generar el PDF.");
             } finally {
-                // 5. Limpieza
+                // 6. Limpieza
                 document.body.removeChild(pdfContainer);
             }
         }
-
     function exportManagerReport() {
         if (lastFilteredRequests.length === 0) {
             alert("Primero genera un resumen para poder exportar los datos.");
