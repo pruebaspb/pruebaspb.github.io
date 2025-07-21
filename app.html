@@ -156,7 +156,7 @@
             </div>
         </div>
         
-        <!-- VISTA GERENCIAL -->
+                <!-- VISTA GERENCIAL -->
         <div id="managerView" class="space-y-8" style="display: none;">
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-semibold mb-4 text-gray-800 border-b pb-3">Panel de Informes Gerenciales</h2>
@@ -201,38 +201,47 @@
                         <div><h3 class="text-gray-500">Con Novedad</h3><p id="kpiWithNovelty" class="text-2xl font-bold text-yellow-600">-</p></div>
                         <div><h3 class="text-gray-500">Canceladas</h3><p id="kpiCancelled" class="text-2xl font-bold text-red-600">-</p></div>
                     </div>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8">
-                        <div class="col-span-2 lg:col-span-1">
-                            <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Estado de Solicitudes</h3>
+                    
+                    <!-- CAMBIOS APLICADOS AQUÍ ABAJO -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8">
+                        
+                        <div class="col-span-2 lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Estado de Solicitudes</h3>
                             <div class="relative h-80">
                                 <canvas id="statusChart"></canvas>
                             </div>
                         </div>
-                        <div class="col-span-2 lg:col-span-1">
-                            <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Top 5 Productos Más Solicitados</h3>
+
+                        <div class="col-span-2 lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top 5 Productos Más Solicitados</h3>
                             <div class="relative h-80">
                                 <canvas id="topProductsChart"></canvas>
                             </div>
                         </div>
-                        <div class="col-span-2 lg:col-span-1">
-                            <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Volumen por Bodega Destino</h3>
+
+                        <div class="col-span-2 lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Volumen por Bodega Destino</h3>
                             <div class="relative h-80">
                                 <canvas id="warehouseChart"></canvas>
                             </div>
                         </div>
-                        <div class="col-span-2 lg:col-span-1">
-                            <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Tasa de Cumplimiento (Unidades Recibidas)</h3>
+
+                        <div class="col-span-2 lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Tasa de Cumplimiento (Unidades Recibidas)</h3>
                             <div class="relative h-80">
                                 <canvas id="fulfillmentChart"></canvas>
                             </div>
                         </div>
-                        <div class="col-span-2 lg:col-span-1">
-                            <h3 class="text-xl font-semibold text-gray-800 mb-2 text-center">Unidades Solicitadas vs. Enviadas</h3>
+
+                        <div class="col-span-2 lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Unidades Solicitadas vs. Enviadas</h3>
                             <div class="relative h-80">
                                 <canvas id="requestedVsSentChart"></canvas>
                             </div>
                         </div>
+
                     </div>
+                    <!-- FIN DE LOS CAMBIOS -->
                 </div>
                 <div class="mt-6 flex justify-end gap-4">
                     <button id="exportManagerReportBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center space-x-2"><span>Exportar a Excel</span></button>
@@ -240,8 +249,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
 <script>
     document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURACIÓN DE FIREBASE ---
