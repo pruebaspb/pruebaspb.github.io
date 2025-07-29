@@ -202,7 +202,6 @@
                         <div><h3 class="text-gray-500">Canceladas</h3><p id="kpiCancelled" class="text-2xl font-bold text-red-600">-</p></div>
                     </div>
                     
-                    <!-- CAMBIOS APLICADOS AQUÍ ABAJO -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8">
                         
                         <div class="col-span-2 lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
@@ -213,10 +212,9 @@
                         </div>
 
                         <div class="col-span-2 lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                            <!-- CAMBIO 1: Título modificado -->
                             <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top 50 Productos Más Solicitados</h3>
-                            <!-- CAMBIO 2: Altura del contenedor del gráfico aumentada -->
-                            <div class="relative h-[1200px]">
+                            <!-- CAMBIO 1 (HTML): Se quita la altura fija y se añade un ID -->
+                            <div id="topProductsChartContainer" class="relative">
                                 <canvas id="topProductsChart"></canvas>
                             </div>
                         </div>
@@ -243,7 +241,6 @@
                         </div>
 
                     </div>
-                    <!-- FIN DE LOS CAMBIOS -->
                 </div>
                 <div class="mt-6 flex justify-end gap-4">
                     <button id="exportManagerReportBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg flex items-center space-x-2"><span>Exportar a Excel</span></button>
@@ -1169,10 +1166,19 @@
             if(req.items) req.items.forEach(item => { acc[item.productName] = (acc[item.productName] || 0) + item.quantity; });
             return acc;
         }, {});
-        // CAMBIO 3: Se modifica .slice(0, 5) a .slice(0, 50)
         const sortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 50);
+
+        // --- CAMBIO 2 (JAVASCRIPT): INICIO DE LA LÓGICA PARA ALTURA DINÁMICA ---
+        const topProductsContainer = document.getElementById('topProductsChartContainer');
+        if (topProductsContainer) {
+            // Calcula la altura: 40px por producto, con un mínimo de 300px y un máximo de 1200px.
+            const dynamicHeight = Math.min(1200, Math.max(300, sortedProducts.length * 40));
+            topProductsContainer.style.height = `${dynamicHeight}px`;
+        }
+        // --- FIN DE LA LÓGICA PARA ALTURA DINÁMICA ---
+
         charts.topProductsChart = new Chart(dom.topProductsChart, {
-            type: 'bar', data: { labels: sortedProducts.map(p => p[0].slice(0, 20) + '...'), datasets: [{ label: 'Unidades Solicitadas', data: sortedProducts.map(p => p[1]), backgroundColor: '#1f2937' }] },
+            type: 'bar', data: { labels: sortedProducts.map(p => p[0].slice(0, 25) + (p[0].length > 25 ? '...' : '')), datasets: [{ label: 'Unidades Solicitadas', data: sortedProducts.map(p => p[1]), backgroundColor: '#1f2937' }] },
             options: { ...chartOptions, indexAxis: 'y', plugins: { legend: { display: false } } }
         });
 
@@ -1218,54 +1224,51 @@
                 async function downloadPdfReport() {
             const reportElement = dom.reportContent;
 
-            // 1. Clonar el elemento
             const clone = reportElement.cloneNode(true);
 
-            // 2. ¡IMPORTANTE! Limpiar los estilos de los cuadros del CLON para que el PDF salga limpio
             const styledChartWrappers = clone.querySelectorAll('.bg-white.p-6.rounded-xl.shadow-lg.border');
             styledChartWrappers.forEach(wrapper => {
-                // Quitar todas las clases que crean el efecto de "cuadro"
                 wrapper.classList.remove('bg-white', 'p-6', 'rounded-xl', 'shadow-lg', 'border', 'border-gray-200');
             });
 
-            // 3. Convertir los canvas a imágenes estáticas en el clon (esto ya funciona)
             for (const id in charts) {
                 const originalCanvas = document.getElementById(id);
                 const clonedCanvas = clone.querySelector(`#${id}`);
                 if (originalCanvas && clonedCanvas) {
-                    const imageUrl = originalCanvas.toDataURL('image/png');
+                    // Para el gráfico de productos, usa su contenedor con altura dinámica
+                    const container = id === 'topProductsChart' ? document.getElementById('topProductsChartContainer') : originalCanvas;
+                    const imageUrl = charts[id].toBase64Image();
                     const img = new Image();
                     img.src = imageUrl;
                     img.style.width = '100%';
                     img.style.height = 'auto';
-                    clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+
+                    // Reemplaza el canvas con la imagen
+                    if (clonedCanvas.parentNode) {
+                       clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
+                    }
                 }
             }
 
-            // 4. Aplicar estilos de paginación y diseño final al clon
             const chartsGrid = clone.querySelector('.grid.lg\\:grid-cols-2'); 
             if (chartsGrid) {
-                // Forzar al contenedor principal de los gráficos a ser un bloque simple
                 chartsGrid.style.display = 'block';
 
                 const chartWrappers = chartsGrid.querySelectorAll(':scope > div');
 
                 chartWrappers.forEach((wrapper, index) => {
-                    // Forzar a que los wrappers se apilen verticalmente en el PDF
                     wrapper.style.display = 'block'; 
                     wrapper.style.width = 'auto'; 
                     wrapper.style.boxSizing = 'border-box';
-                    wrapper.style.padding = '10mm'; // Añadir un buen espacio entre gráficos
-                    wrapper.style.pageBreakInside = 'avoid'; // Evitar cortes feos
+                    wrapper.style.padding = '10mm'; 
+                    wrapper.style.pageBreakInside = 'avoid'; 
 
-                    // Lógica de paginación: Salto de página ANTES del TERCER gráfico (índice 2)
                     if (index >= 2) {
                         wrapper.style.pageBreakBefore = 'always';
                     }
                 });
             }
 
-            // 5. Preparar el contenedor invisible para el clon
             const pdfContainer = document.createElement('div');
             pdfContainer.style.position = 'fixed';
             pdfContainer.style.top = '0';
@@ -1273,17 +1276,16 @@
             pdfContainer.style.width = '210mm';
 
             clone.style.backgroundColor = 'white';
-            clone.style.padding = '0'; // Quitar padding extra
+            clone.style.padding = '0';
             pdfContainer.appendChild(clone);
             document.body.appendChild(pdfContainer);
 
-            // 6. Configurar y generar el PDF
             const today = new Date().toISOString().slice(0, 10);
             const opt = {
-                margin: 10, // Margen general de 1cm
+                margin: 10,
                 filename: `Informe_Gerencial_${today}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { scale: 2, useCORS: true, logging: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
@@ -1293,7 +1295,6 @@
                 console.error("Error al generar el PDF:", error);
                 alert("Ocurrió un error al generar el PDF.");
             } finally {
-                // 7. Limpieza final
                 document.body.removeChild(pdfContainer);
             }
         }
