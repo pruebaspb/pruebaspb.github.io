@@ -213,8 +213,10 @@
                         </div>
 
                         <div class="col-span-2 lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top 5 Productos Más Solicitados</h3>
-                            <div class="relative h-80">
+                            <!-- CAMBIO 1: Título modificado -->
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Top 50 Productos Más Solicitados</h3>
+                            <!-- CAMBIO 2: Altura del contenedor del gráfico aumentada -->
+                            <div class="relative h-[1200px]">
                                 <canvas id="topProductsChart"></canvas>
                             </div>
                         </div>
@@ -1167,7 +1169,8 @@
             if(req.items) req.items.forEach(item => { acc[item.productName] = (acc[item.productName] || 0) + item.quantity; });
             return acc;
         }, {});
-        const sortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        // CAMBIO 3: Se modifica .slice(0, 5) a .slice(0, 50)
+        const sortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 50);
         charts.topProductsChart = new Chart(dom.topProductsChart, {
             type: 'bar', data: { labels: sortedProducts.map(p => p[0].slice(0, 20) + '...'), datasets: [{ label: 'Unidades Solicitadas', data: sortedProducts.map(p => p[1]), backgroundColor: '#1f2937' }] },
             options: { ...chartOptions, indexAxis: 'y', plugins: { legend: { display: false } } }
