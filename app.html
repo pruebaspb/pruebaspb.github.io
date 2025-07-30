@@ -1234,120 +1234,161 @@
                 options: chartOptions
             });
         }
-                async function downloadPdfReport() {
-            // Se muestra un mensaje de carga para que el usuario sepa que se está procesando.
-            const originalButtonText = dom.downloadPdfBtn.innerHTML;
-            dom.downloadPdfBtn.innerHTML = `<span><svg class="animate-spin -ml-1 mr-3 h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Generando...</span>`;
-            dom.downloadPdfBtn.disabled = true;
+        async function downloadPdfReport() {
+    const reportTitle = "Informe Gerencial de Traslados";
+    const reportSubtitle = document.getElementById('reportDateSubtitle').textContent;
+    
+    const kpis = {
+        "Total Solicitudes": dom.kpiTotalRequests.textContent,
+        "Completadas": dom.kpiCompleted.textContent,
+        "Con Novedad": dom.kpiWithNovelty.textContent,
+        "Canceladas": dom.kpiCancelled.textContent,
+    };
 
-            try {
-                // 1. Recopilar todos los datos necesarios
-                const reportTitle = "Informe Gerencial de Traslados";
-                const reportSubtitle = document.getElementById('reportDateSubtitle').textContent;
-                const kpis = {
-                    "Total Solicitudes": dom.kpiTotalRequests.textContent, "Completadas": dom.kpiCompleted.textContent,
-                    "Con Novedad": dom.kpiWithNovelty.textContent, "Canceladas": dom.kpiCancelled.textContent,
-                };
-                const kpiColors = { "Completadas": '#22c55e', "Con Novedad": '#f59e0b', "Canceladas": '#ef4444' };
-                const productCounts = lastFilteredRequests.reduce((acc, req) => {
-                    if (req.items && Array.isArray(req.items)) {
-                        req.items.forEach(item => {
-                            if (item && item.productName && typeof item.quantity === 'number') {
-                                acc[item.productName] = (acc[item.productName] || 0) + item.quantity;
-                            }
-                        });
-                    }
-                    return acc;
-                }, {});
-                const fullSortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 50);
+    const kpiColors = {
+        "Completadas": '#22c55e',
+        "Con Novedad": '#f59e0b',
+        "Canceladas": '#ef4444'
+    };
 
-                const chartDataForPdf = {
-                    statusChart: { title: 'Estado de Solicitudes', headers: ['Estado', 'Cantidad'], data: Object.entries(charts.statusChart.data.datasets[0].data).map(([i, v]) => [charts.statusChart.data.labels[i], v]) },
-                    topProductsChart: { title: 'Top 50 Productos Más Solicitados', headers: ['Producto', 'Unidades Solicitadas'], data: fullSortedProducts },
-                    warehouseChart: { title: 'Volumen por Bodega Destino', headers: ['Bodega', 'Nº de Solicitudes'], data: Object.entries(charts.warehouseChart.data.datasets[0].data).map(([i, v]) => [charts.warehouseChart.data.labels[i], v]) },
-                    fulfillmentChart: { title: 'Tasa de Cumplimiento', headers: ['Concepto', 'Total Unidades'], data: [['Unidades Enviadas', charts.fulfillmentChart.data.datasets[0].data[0]], ['Unidades Recibidas', charts.fulfillmentChart.data.datasets[1].data[0]]] },
-                    requestedVsSentChart: { title: 'Unidades Solicitadas vs. Enviadas', headers: ['Concepto', 'Total Unidades'], data: [['Unidades Solicitadas', charts.requestedVsSentChart.data.datasets[0].data[0]], ['Unidades Enviadas', charts.requestedVsSentChart.data.datasets[1].data[0]]] }
-                };
-                
-                // 2. Crear un contenedor invisible para renderizar cada página individualmente
-                const pdfBuilder = document.createElement('div');
-                pdfBuilder.style.position = 'absolute';
-                pdfBuilder.style.left = '-9999px';
-                pdfBuilder.style.top = '0';
-                pdfBuilder.style.fontFamily = 'Arial, sans-serif';
-                pdfBuilder.style.color = '#374151';
-                document.body.appendChild(pdfBuilder);
-
-                const createPageElement = (content) => {
-                    const page = document.createElement('div');
-                    page.style.width = '210mm';
-                    page.style.height = '297mm'; // Altura fija para controlar el contenido
-                    page.style.padding = '20mm 15mm';
-                    page.style.boxSizing = 'border-box';
-                    page.style.display = 'flex';
-                    page.style.flexDirection = 'column';
-                    page.style.alignItems = 'center';
-                    page.style.justifyContent = 'flex-start';
-                    page.innerHTML = content;
-                    return page;
-                };
-
-                const pages = [];
-
-                // Página 1: Portada
-                pages.push(createPageElement(`
-                    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;">
-                        <div style="text-align: center; margin-bottom: 50px;"><h1 style="font-size: 28px; margin-bottom: 8px; color: #111827;">${reportTitle}</h1><p style="font-size: 14px; color: #6B7280;">${reportSubtitle}</p></div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px 50px; text-align: center;">${Object.entries(kpis).map(([key, value]) => `<div class="kpi-item">
-                            <h3 style="font-size: 14px; color: #6B7280; font-weight: normal; margin-bottom: 5px; text-transform: uppercase;">${key}</h3>
-                            <p style="font-size: 32px; font-weight: bold; margin: 0; color: ${kpiColors[key] || '#111827'};">${value}</p>
-                        </div>`).join('')}</div>
-                    </div>`));
-
-                // Crear el resto de páginas
-                for (const chartId in chartDataForPdf) {
-                    const item = chartDataForPdf[chartId];
-                    // Página del Gráfico
-                    pages.push(createPageElement(`<h2 style="font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 25px; color: #111827;">${item.title}</h2><img src="${charts[chartId].toBase64Image()}" style="max-width: 180mm; max-height: 220mm; display: block; margin: auto;">`));
-                    
-                    // Páginas de la Tabla (divididas si es necesario)
-                    const chunkSize = 25; // Filas por página para la tabla de productos
-                    for (let i = 0; i < item.data.length; i += chunkSize) {
-                        const chunk = item.data.slice(i, i + chunkSize);
-                        const pageTitle = item.data.length > chunkSize ? `${item.title} - Datos Detallados (pág. ${Math.floor(i / chunkSize) + 1})` : `${item.title} - Datos Detallados`;
-                        pages.push(createPageElement(`<h2 style="font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 25px; color: #111827;">${pageTitle}</h2><table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr>${item.headers.map(h => `<th style="border: 1px solid #DEE2E6; padding: 10px; text-align: left; background-color: #F8F9FA; font-weight: bold;">${h}</th>`).join('')}</tr></thead><tbody>${chunk.map(row => `<tr style="background-color: ${chunk.indexOf(row) % 2 === 0 ? '#FFFFFF' : '#F8F9FA'};">${row.map(cell => `<td style="border: 1px solid #DEE2E6; padding: 10px;">${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`));
-                    }
+    const productCounts = lastFilteredRequests.reduce((acc, req) => {
+        if (req.items && Array.isArray(req.items)) {
+            req.items.forEach(item => {
+                if (item && item.productName && typeof item.quantity === 'number') {
+                    acc[item.productName] = (acc[item.productName] || 0) + item.quantity;
                 }
-                
-                // 3. Configurar y ejecutar html2pdf secuencialmente
-                const today = new Date().toISOString().slice(0, 10);
-                const opt = {
-                    margin: 0,
-                    filename: `Informe_Gerencial_${today}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-
-                // MÉTODO SECUENCIAL A PRUEBA DE FALLOS
-                let worker = html2pdf().set(opt).from(pages[0]);
-                for (let i = 1; i < pages.length; i++) {
-                    worker = worker.addPage().from(pages[i]);
-                }
-                await worker.save();
-
-            } catch (error) {
-                console.error("Error detallado al generar el PDF:", error);
-                alert("Ocurrió un error al generar el PDF. Por favor, inténtelo de nuevo.");
-            } finally {
-                const pdfBuilder = document.querySelector('body > div[style*="left: -9999px"]');
-                if (pdfBuilder) {
-                    document.body.removeChild(pdfBuilder);
-                }
-                dom.downloadPdfBtn.innerHTML = originalButtonText;
-                dom.downloadPdfBtn.disabled = false;
-            }
+            });
         }
+        return acc;
+    }, {});
+    const fullSortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 50);
+
+    const chartDataForPdf = {
+        statusChart: {
+            title: 'Estado de Solicitudes',
+            headers: ['Estado', 'Cantidad'],
+            data: Object.entries(charts.statusChart.data.datasets[0].data).map(([i, v]) => [charts.statusChart.data.labels[i], v])
+        },
+        topProductsChart: {
+            title: 'Top 50 Productos Más Solicitados',
+            headers: ['Producto', 'Unidades Solicitadas'],
+            data: fullSortedProducts
+        },
+        warehouseChart: {
+            title: 'Volumen por Bodega Destino',
+            headers: ['Bodega', 'Nº de Solicitudes'],
+            data: Object.entries(charts.warehouseChart.data.datasets[0].data).map(([i, v]) => [charts.warehouseChart.data.labels[i], v])
+        },
+        fulfillmentChart: {
+            title: 'Tasa de Cumplimiento',
+            headers: ['Concepto', 'Total Unidades'],
+            data: [['Unidades Enviadas', charts.fulfillmentChart.data.datasets[0].data[0]], ['Unidades Recibidas', charts.fulfillmentChart.data.datasets[1].data[0]]]
+        },
+        requestedVsSentChart: {
+            title: 'Unidades Solicitadas vs. Enviadas',
+            headers: ['Concepto', 'Total Unidades'],
+            data: [['Unidades Solicitadas', charts.requestedVsSentChart.data.datasets[0].data[0]], ['Unidades Enviadas', charts.requestedVsSentChart.data.datasets[1].data[0]]]
+        }
+    };
+
+    // 1. Construcción del HTML
+    let pdfHtml = `
+    <html><head><style>
+        body { font-family: Arial, sans-serif; color: #374151; margin: 0; padding: 0; }
+        .pdf-page {
+            width: 100%;
+            padding: 20mm 15mm;
+            box-sizing: border-box;
+        }
+        .cover-page {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .pdf-header h1 { font-size: 28px; margin-bottom: 8px; color: #111827; text-align: center; }
+        .pdf-header p { font-size: 14px; color: #6B7280; text-align: center; }
+        .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px 50px; text-align: center; margin-top: 50px; }
+        .kpi-item h3 { font-size: 14px; color: #6B7280; font-weight: normal; margin-bottom: 5px; text-transform: uppercase; }
+        .kpi-item p { font-size: 32px; font-weight: bold; margin: 0; }
+        .pdf-section-break {
+            page-break-before: always;
+            break-before: page;
+            padding: 20mm 15mm;
+            box-sizing: border-box;
+        }
+        .chart-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 25px; color: #111827; }
+        .chart-image {
+            max-width: 180mm;
+            max-height: 180mm;
+            display: block;
+            margin: auto;
+            object-fit: contain;
+        }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; word-wrap: break-word; }
+        .data-table th, .data-table td { border: 1px solid #DEE2E6; padding: 10px; text-align: left; }
+        .data-table th { background-color: #F8F9FA; font-weight: bold; }
+        .data-table tr:nth-child(even) { background-color: #F8F9FA; }
+    </style></head><body>
+    
+    <div class="pdf-page cover-page">
+        <div class="pdf-header">
+            <h1>${reportTitle}</h1>
+            <p>${reportSubtitle}</p>
+        </div>
+        <div class="kpi-grid">
+            ${Object.entries(kpis).map(([key, value]) => `
+                <div class="kpi-item">
+                    <h3>${key}</h3>
+                    <p style="color: ${kpiColors[key] || '#111827'};">${value}</p>
+                </div>
+            `).join('')}
+        </div>
+    </div>`;
+
+    for (const chartId in chartDataForPdf) {
+        const item = chartDataForPdf[chartId];
+        const chartImage = charts[chartId].toBase64Image();
+
+        pdfHtml += `
+        <div class="pdf-section-break">
+            <h2 class="chart-title">${item.title}</h2>
+            <img src="${chartImage}" class="chart-image">
+        </div>
+        <div class="pdf-section-break">
+            <h2 class="chart-title">${item.title} - Datos Detallados</h2>
+            <table class="data-table">
+                <thead><tr>${item.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                <tbody>${item.data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+            </table>
+        </div>`;
+    }
+
+    pdfHtml += `</body></html>`;
+
+    const pdfElement = document.createElement('div');
+    pdfElement.innerHTML = pdfHtml;
+    document.body.appendChild(pdfElement); // Importante para que estilos se apliquen
+
+    const today = new Date().toISOString().slice(0, 10);
+    const opt = {
+        margin: 0,
+        filename: `Informe_Gerencial_${today}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+        await html2pdf().from(pdfElement).set(opt).save();
+    } catch (error) {
+        console.error("Error al generar el PDF:", error);
+        alert("Ocurrió un error al generar el PDF.");
+    } finally {
+        pdfElement.remove(); // Limpieza del DOM
+    }
+}
         function exportManagerReport() {
             const dataToExport = lastFilteredRequests.length > 0 ? lastFilteredRequests : allTransferRequests;
              if (dataToExport.length === 0) {
