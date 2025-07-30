@@ -1240,120 +1240,111 @@
             });
         }
         async function downloadPdfReport() {
-    // --- SOLUCIÓN: AÑADIMOS UNA VERIFICACIÓN DE SEGURIDAD AL INICIO ---
-    // Si el objeto 'charts' está vacío o no hay solicitudes filtradas,
-    // significa que no se ha generado un informe válido.
+    console.log("--- Iniciando el proceso de descarga de PDF ---");
+
+    // 1. Verificación de datos iniciales
     if (Object.keys(charts).length === 0 || !lastFilteredRequests || lastFilteredRequests.length === 0) {
-        alert("Por favor, primero haz clic en 'Generar Informe' para poder descargar el PDF.");
-        return; // Detiene la ejecución de la función para evitar un PDF vacío.
+        alert("Error: No se ha generado un informe válido. Por favor, haz clic en 'Generar Informe' primero.");
+        console.error("PROCESO DETENIDO: El objeto 'charts' o la variable 'lastFilteredRequests' están vacíos.");
+        return;
     }
-    // --------------------------------------------------------------------
-
-    // El resto del código, que ya es correcto, se mantiene igual.
-    const reportTitle = "Informe Gerencial de Traslados";
-    const reportSubtitle = document.getElementById('reportDateSubtitle').textContent;
-    
-    const kpis = {
-        "Total Solicitudes": dom.kpiTotalRequests.textContent,
-        "Completadas": dom.kpiCompleted.textContent,
-        "Con Novedad": dom.kpiWithNovelty.textContent,
-        "Canceladas": dom.kpiCancelled.textContent,
-    };
-
-    const kpiColors = {
-        "Completadas": '#22c55e',
-        "Con Novedad": '#f59e0b',
-        "Canceladas": '#ef4444'
-    };
-
-    const productCounts = lastFilteredRequests.reduce((acc, req) => {
-        if (req.items && Array.isArray(req.items)) {
-            req.items.forEach(item => {
-                if (item && item.productName && typeof item.quantity === 'number') {
-                    acc[item.productName] = (acc[item.productName] || 0) + item.quantity;
-                }
-            });
-        }
-        return acc;
-    }, {});
-    const fullSortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 50);
-
-    const chartDataForPdf = {
-        statusChart: {
-            title: 'Estado de Solicitudes',
-            headers: ['Estado', 'Cantidad'],
-            data: Object.entries(charts.statusChart.data.datasets[0].data).map(([i, v]) => [charts.statusChart.data.labels[i], v])
-        },
-        topProductsChart: {
-            title: 'Top 50 Productos Más Solicitados',
-            headers: ['Producto', 'Unidades Solicitadas'],
-            data: fullSortedProducts
-        },
-        warehouseChart: {
-            title: 'Volumen por Bodega Destino',
-            headers: ['Bodega', 'Nº de Solicitudes'],
-            data: Object.entries(charts.warehouseChart.data.datasets[0].data).map(([i, v]) => [charts.warehouseChart.data.labels[i], v])
-        },
-        fulfillmentChart: {
-            title: 'Tasa de Cumplimiento',
-            headers: ['Concepto', 'Total Unidades'],
-            data: [['Unidades Enviadas', charts.fulfillmentChart.data.datasets[0].data[0]], ['Unidades Recibidas', charts.fulfillmentChart.data.datasets[1].data[0]]]
-        },
-        requestedVsSentChart: {
-            title: 'Unidades Solicitadas vs. Enviadas',
-            headers: ['Concepto', 'Total Unidades'],
-            data: [['Unidades Solicitadas', charts.requestedVsSentChart.data.datasets[0].data[0]], ['Unidades Enviadas', charts.requestedVsSentChart.data.datasets[1].data[0]]]
-        }
-    };
-
-    const pdfStyles = `
-    <style>
-        #pdf-render-container { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
-        .pdf-page { width: 210mm; height: 297mm; padding: 20mm 15mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; page-break-after: always; }
-        .pdf-content-block { break-inside: avoid; page-break-inside: avoid; }
-        .pdf-header h1 { font-size: 28px; margin-bottom: 8px; color: #111827; text-align: center; }
-        .pdf-header p { font-size: 14px; color: #6B7280; text-align: center; }
-        .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px 50px; text-align: center; margin-top: 50px; }
-        .kpi-item h3 { font-size: 14px; color: #6B7280; font-weight: normal; margin-bottom: 5px; text-transform: uppercase; }
-        .kpi-item p { font-size: 32px; font-weight: bold; margin: 0; }
-        .chart-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 25px; color: #111827; }
-        .chart-image { max-width: 180mm; max-height: 160mm; object-fit: contain; }
-        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; word-wrap: break-word; }
-        .data-table th, .data-table td { border: 1px solid #DEE2E6; padding: 10px; text-align: left; }
-        .data-table th { background-color: #F8F9FA; font-weight: bold; }
-        .data-table tr:nth-child(even) { background-color: #F8F9FA; }
-    </style>`;
-
-    let contentHtml = '';
-    contentHtml += `<div class="pdf-page"><div class="pdf-content-block"><div class="pdf-header"><h1>${reportTitle}</h1><p>${reportSubtitle}</p></div><div class="kpi-grid">${Object.entries(kpis).map(([key, value]) => `<div class="kpi-item"><h3>${key}</h3><p style="color: ${kpiColors[key] || '#111827'};">${value}</p></div>`).join('')}</div></div></div>`;
-    for (const chartId in chartDataForPdf) {
-        const item = chartDataForPdf[chartId];
-        const chartImage = charts[chartId].toBase64Image();
-        contentHtml += `<div class="pdf-page"><div class="pdf-content-block"><h2 class="chart-title">${item.title}</h2><img src="${chartImage}" class="chart-image"></div></div><div class="pdf-page"><div class="pdf-content-block"><h2 class="chart-title">${item.title} - Datos Detallados</h2><table class="data-table"><thead><tr>${item.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${item.data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
-    }
-
-    const today = new Date().toISOString().slice(0, 10);
-    const opt = {
-        margin: 0,
-        filename: `Informe_Gerencial_${today}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    const renderContainer = document.createElement('div');
-    renderContainer.id = 'pdf-render-container';
-    renderContainer.innerHTML = pdfStyles + contentHtml;
+    console.log("PASO 1: Verificación de datos completada. Se encontraron", Object.keys(charts).length, "gráficos listos.");
 
     try {
+        // --- Preparación de datos (sin cambios) ---
+        const reportTitle = "Informe Gerencial de Traslados";
+        const reportSubtitle = document.getElementById('reportDateSubtitle').textContent;
+        const kpis = {
+            "Total Solicitudes": dom.kpiTotalRequests.textContent, "Completadas": dom.kpiCompleted.textContent,
+            "Con Novedad": dom.kpiWithNovelty.textContent, "Canceladas": dom.kpiCancelled.textContent,
+        };
+        const kpiColors = {"Completadas": '#22c55e', "Con Novedad": '#f59e0b', "Canceladas": '#ef4444'};
+        const productCounts = lastFilteredRequests.reduce((acc, req) => {
+            if (req.items) req.items.forEach(item => {
+                if (item && item.productName) acc[item.productName] = (acc[item.productName] || 0) + item.quantity;
+            });
+            return acc;
+        }, {});
+        const fullSortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 50);
+
+        const chartDataForPdf = {
+            statusChart: {
+                title: 'Estado de Solicitudes',
+                headers: ['Estado', 'Cantidad'],
+                data: Object.entries(charts.statusChart.data.datasets[0].data).map(([i, v]) => [charts.statusChart.data.labels[i], v])
+            },
+            topProductsChart: {
+                title: 'Top 50 Productos Más Solicitados',
+                headers: ['Producto', 'Unidades Solicitadas'],
+                data: fullSortedProducts
+            },
+            warehouseChart: {
+                title: 'Volumen por Bodega Destino',
+                headers: ['Bodega', 'Nº de Solicitudes'],
+                data: Object.entries(charts.warehouseChart.data.datasets[0].data).map(([i, v]) => [charts.warehouseChart.data.labels[i], v])
+            },
+            fulfillmentChart: {
+                title: 'Tasa de Cumplimiento',
+                headers: ['Concepto', 'Total Unidades'],
+                data: [['Unidades Enviadas', charts.fulfillmentChart.data.datasets[0].data[0]], ['Unidades Recibidas', charts.fulfillmentChart.data.datasets[1].data[0]]]
+            },
+            requestedVsSentChart: {
+                title: 'Unidades Solicitadas vs. Enviadas',
+                headers: ['Concepto', 'Total Unidades'],
+                data: [['Unidades Solicitadas', charts.requestedVsSentChart.data.datasets[0].data[0]], ['Unidades Enviadas', charts.requestedVsSentChart.data.datasets[1].data[0]]]
+            }
+        };
+        console.log("PASO 2: Datos para el PDF preparados correctamente.");
+
+        // --- Generación de imágenes (Punto crítico) ---
+        const chartImages = {};
+        console.log("PASO 3: Iniciando conversión de gráficos a imágenes...");
+        for (const chartId in chartDataForPdf) {
+            if (charts[chartId] && typeof charts[chartId].toBase64Image === 'function') {
+                chartImages[chartId] = charts[chartId].toBase64Image();
+                console.log(` -> Imagen para '${chartId}' generada. Longitud: ${chartImages[chartId].length}`);
+                if (chartImages[chartId].length < 200) { // Un data URI válido es muy largo
+                     console.warn(`   ADVERTENCIA: La imagen para '${chartId}' parece estar vacía o es muy pequeña.`);
+                }
+            } else {
+                throw new Error(`El gráfico con ID '${chartId}' no es válido o no se pudo convertir a imagen.`);
+            }
+        }
+        console.log("PASO 3: Todas las imágenes de los gráficos se han generado.");
+
+        // --- Construcción de HTML (sin cambios, solo se confirma que se llega aquí) ---
+        const pdfStyles = `<style>#pdf-render-container{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}.pdf-page{width:210mm;height:297mm;padding:20mm 15mm;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;background:white;page-break-after:always}.pdf-content-block{break-inside:avoid;page-break-inside:avoid}.pdf-header h1{font-size:28px;margin-bottom:8px;text-align:center}.pdf-header p{font-size:14px;color:#6B7280;text-align:center}.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:25px 50px;text-align:center;margin-top:50px}.kpi-item h3{font-size:14px;font-weight:normal;margin-bottom:5px}.kpi-item p{font-size:32px;font-weight:bold;margin:0}.chart-title{font-size:22px;font-weight:600;text-align:center;margin-bottom:25px}.chart-image{max-width:180mm;max-height:160mm;object-fit:contain}.data-table{width:100%;border-collapse:collapse;font-size:12px}</style>`;
+        let contentHtml = '';
+        contentHtml += `<div class="pdf-page"><div class="pdf-content-block"><div class="pdf-header"><h1>${reportTitle}</h1><p>${reportSubtitle}</p></div><div class="kpi-grid">${Object.entries(kpis).map(([key, value]) => `<div class="kpi-item"><h3>${key}</h3><p style="color:${kpiColors[key]||'#111827'};">${value}</p></div>`).join('')}</div></div></div>`;
+        for (const chartId in chartDataForPdf) {
+            const item = chartDataForPdf[chartId];
+            contentHtml += `<div class="pdf-page"><div class="pdf-content-block"><h2 class="chart-title">${item.title}</h2><img src="${chartImages[chartId]}" class="chart-image"></div></div><div class="pdf-page"><div class="pdf-content-block"><h2 class="chart-title">${item.title} - Datos Detallados</h2><table class="data-table"><thead><tr>${item.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${item.data.map(row=>`<tr>${row.map(cell=>`<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+        }
+        console.log("PASO 4: El HTML para el PDF ha sido construido.");
+
+        // --- Lógica final de renderizado ---
+        const today = new Date().toISOString().slice(0, 10);
+        const opt = { margin:0, filename:`Informe_Gerencial_${today}.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,letterRendering:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} };
+
+        const renderContainer = document.createElement('div');
+        renderContainer.id = 'pdf-render-container';
+        renderContainer.innerHTML = pdfStyles + contentHtml;
+        
+        console.log("PASO 5: Añadiendo contenedor temporal al DOM...");
         document.body.appendChild(renderContainer);
+
+        console.log("PASO 6: Invocando html2pdf.js para generar y guardar el archivo...");
         await html2pdf().from(renderContainer).set(opt).save();
-    } catch (error) {
-        console.error("Error al generar el PDF:", error);
-        alert("Ocurrió un error al generar el PDF.");
+        console.log("--- Proceso de descarga de PDF finalizado. ---");
+
+    } catch (e) {
+        console.error("--- ERROR INESPERADO DURANTE LA GENERACIÓN DEL PDF ---", e);
+        alert("Ocurrió un error crítico al crear el PDF. Por favor, revisa la consola del navegador (tecla F12) para ver los detalles del error.");
     } finally {
-        if (renderContainer) {
-            renderContainer.remove();
+        const container = document.getElementById('pdf-render-container');
+        if (container) {
+            container.remove();
+            console.log("Contenedor temporal eliminado del DOM.");
         }
     }
 }
