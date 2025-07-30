@@ -1234,140 +1234,157 @@
                 options: chartOptions
             });
         }
-               // ==================================================================
-        // INICIO DE LA FUNCIÓN DE PDF CORREGIDA Y MEJORADA
-        // ==================================================================
+                async function downloadPdfReport() {
+            // 1. Recopilar datos (sin cambios)
+            const reportTitle = "Informe Gerencial de Traslados";
+            const reportSubtitle = document.getElementById('reportDateSubtitle').textContent;
+            const kpis = {
+                "Total Solicitudes": dom.kpiTotalRequests.textContent,
+                "Completadas": dom.kpiCompleted.textContent,
+                "Con Novedad": dom.kpiWithNovelty.textContent,
+                "Canceladas": dom.kpiCancelled.textContent,
+            };
+            const kpiColors = {
+                "Completadas": '#22c55e',
+                "Con Novedad": '#f59e0b',
+                "Canceladas": '#ef4444'
+            };
+            const productCounts = lastFilteredRequests.reduce((acc, req) => {
+                if (req.items && Array.isArray(req.items)) {
+                    req.items.forEach(item => {
+                        if (item && item.productName && typeof item.quantity === 'number') {
+                            acc[item.productName] = (acc[item.productName] || 0) + item.quantity;
+                        }
+                    });
+                }
+                return acc;
+            }, {});
+            const fullSortedProducts = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 50);
 
-        // Función auxiliar para convertir una imagen de una URL a formato de datos (Base64)
-        async function imageToDataUrl(url) {
-            try {
-                // Usar un proxy para evitar problemas de CORS si el servidor de imágenes es estricto.
-                // 'https://cors-anywhere.herokuapp.com/' es un proxy público, se puede reemplazar por uno propio.
-                const response = await fetch(`https://cors-anywhere.herokuapp.com/${url}`);
-                if (!response.ok) throw new Error(`Network response was not ok for ${url}`);
-                const blob = await response.blob();
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
-            } catch (error) {
-                console.error("No se pudo cargar la imagen para el PDF:", url, error);
-                // Retorna un píxel transparente como fallback para no romper el PDF
-                return "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-            }
-        }
-
-        async function downloadPdfReport() {
-            const originalButtonText = dom.downloadPdfBtn.innerHTML;
-            dom.downloadPdfBtn.innerHTML = `<span><svg class="animate-spin -ml-1 mr-3 h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Generando...</span>`;
-            dom.downloadPdfBtn.disabled = true;
-
-            try {
-                // 1. Convertir todas las imágenes necesarias a formato de datos ANTES de construir el HTML
-                const [logoDataUrl, statusChartImg, warehouseChartImg, fulfillmentChartImg, requestedVsSentChartImg, topProductsChartImg] = await Promise.all([
-                    imageToDataUrl('https://parabarberos.github.io/2.jpg'),
-                    Promise.resolve(charts.statusChart.toBase64Image()),
-                    Promise.resolve(charts.warehouseChart.toBase64Image()),
-                    Promise.resolve(charts.fulfillmentChart.toBase64Image()),
-                    Promise.resolve(charts.requestedVsSentChart.toBase64Image()),
-                    Promise.resolve(charts.topProductsChart.toBase64Image())
-                ]);
-
-                // 2. Recopilar datos y texto para el informe
-                const reportTitle = "Informe Gerencial de Traslados";
-                const reportSubtitle = dom.reportDateSubtitle.textContent;
-                const kpis = {
-                    "Total Solicitudes": dom.kpiTotalRequests.textContent, "Completadas": dom.kpiCompleted.textContent,
-                    "Con Novedad": dom.kpiWithNovelty.textContent, "Canceladas": dom.kpiCancelled.textContent,
-                };
-                const kpiColors = { "Completadas": '#22c55e', "Con Novedad": '#f59e0b', "Canceladas": '#ef4444' };
-
-                // 3. Crear un único bloque de HTML con saltos de página explícitos
-                const reportElement = document.createElement('div');
-                reportElement.innerHTML = `
-                    <!-- PÁGINA 1: PORTADA -->
-                    <div style="width: 210mm; height: 296mm; padding: 20mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-family: Arial, sans-serif;">
-                        <img src="${logoDataUrl}" style="width: 120px; height: 120px; border-radius: 50%; margin-bottom: 20px;">
-                        <h1 style="font-size: 28px; margin-bottom: 8px; color: #111827;">${reportTitle}</h1>
-                        <p style="font-size: 14px; color: #6B7280;">${reportSubtitle}</p>
-                        <div style="width: 100%; max-width: 500px; margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 25px 50px;">
+            const chartDataForPdf = {
+                statusChart: {
+                    title: 'Estado de Solicitudes',
+                    headers: ['Estado', 'Cantidad'],
+                    data: Object.entries(charts.statusChart.data.datasets[0].data).map(([i, v]) => [charts.statusChart.data.labels[i], v])
+                },
+                topProductsChart: {
+                    title: 'Top 50 Productos Más Solicitados',
+                    headers: ['Producto', 'Unidades Solicitadas'],
+                    data: fullSortedProducts
+                },
+                warehouseChart: {
+                    title: 'Volumen por Bodega Destino',
+                    headers: ['Bodega', 'Nº de Solicitudes'],
+                    data: Object.entries(charts.warehouseChart.data.datasets[0].data).map(([i, v]) => [charts.warehouseChart.data.labels[i], v])
+                },
+                fulfillmentChart: {
+                    title: 'Tasa de Cumplimiento',
+                    headers: ['Concepto', 'Total Unidades'],
+                    data: [['Unidades Enviadas', charts.fulfillmentChart.data.datasets[0].data[0]], ['Unidades Recibidas', charts.fulfillmentChart.data.datasets[1].data[0]]]
+                },
+                requestedVsSentChart: {
+                    title: 'Unidades Solicitadas vs. Enviadas',
+                    headers: ['Concepto', 'Total Unidades'],
+                    data: [['Unidades Solicitadas', charts.requestedVsSentChart.data.datasets[0].data[0]], ['Unidades Enviadas', charts.requestedVsSentChart.data.datasets[1].data[0]]]
+                }
+            };
+            
+            // 2. Construir el HTML del PDF
+            let pdfHtml = `
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; color: #374151; }
+                        /* --- CAMBIO 1: SE ELIMINA CUALQUIER REGLA DE page-break-* DE AQUÍ --- */
+                        .pdf-page {
+                            width: 100%;
+                            padding: 20mm 15mm;
+                            box-sizing: border-box;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: flex-start; /* Alinea contenido arriba */
+                        }
+                        .cover-page {
+                            height: 277mm; /* La portada sí necesita altura para centrarse */
+                            justify-content: center;
+                        }
+                        .pdf-header h1 { font-size: 28px; margin-bottom: 8px; color: #111827; text-align: center; }
+                        .pdf-header p { font-size: 14px; color: #6B7280; text-align: center; }
+                        .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px 50px; text-align: center; margin-top: 50px; }
+                        .kpi-item h3 { font-size: 14px; color: #6B7280; font-weight: normal; margin-bottom: 5px; text-transform: uppercase; }
+                        .kpi-item p { font-size: 32px; font-weight: bold; margin: 0; }
+                        .chart-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 25px; color: #111827; }
+                        .chart-image { max-width: 180mm; max-height: 220mm; display: block; margin: auto; }
+                        .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        .data-table th, .data-table td { border: 1px solid #DEE2E6; padding: 10px; text-align: left; }
+                        .data-table th { background-color: #F8F9FA; font-weight: bold; }
+                        .data-table tr:nth-child(even) { background-color: #F8F9FA; }
+                    </style>
+                </head>
+                <body>
+                    <!-- Portada (sin clase de salto de página) -->
+                    <div class="pdf-page cover-page">
+                        <div class="pdf-header">
+                            <h1>${reportTitle}</h1>
+                            <p>${reportSubtitle}</p>
+                        </div>
+                        <div class="kpi-grid">
                             ${Object.entries(kpis).map(([key, value]) => `
-                                <div>
-                                    <h3 style="font-size: 14px; color: #6B7280; font-weight: normal; margin-bottom: 5px; text-transform: uppercase;">${key}</h3>
-                                    <p style="font-size: 32px; font-weight: bold; margin: 0; color: ${kpiColors[key] || '#111827'};">${value}</p>
-                                </div>`).join('')}
+                                <div class="kpi-item">
+                                    <h3>${key}</h3>
+                                    <p style="color: ${kpiColors[key] || '#111827'};">${value}</p>
+                                </div>
+                            `).join('')}
                         </div>
-                    </div>
+                    </div>`;
 
-                    <div class="html2pdf__page-break"></div>
+            // 3. Crear el resto de páginas, añadiendo la clase especial para el salto
+            for (const chartId in chartDataForPdf) {
+                const item = chartDataForPdf[chartId];
+                
+                // Página del Gráfico con la clase para el salto
+                pdfHtml += `
+                    <div class="pdf-page pdf-section-break">
+                        <h2 class="chart-title">${item.title}</h2>
+                        <img src="${charts[chartId].toBase64Image()}" class="chart-image">
+                    </div>`;
 
-                    <!-- PÁGINA 2: DASHBOARD DE GRÁFICOS -->
-                    <div style="width: 210mm; height: 296mm; padding: 20mm; box-sizing: border-box; display: flex; flex-direction: column; font-family: Arial, sans-serif;">
-                        <h2 style="text-align: center; font-size: 22px; margin-bottom: 20px;">Dashboard Visual</h2>
-                        <div style="text-align: center;">
-                            <div style="display: inline-block; width: 48%; margin-bottom: 20px; vertical-align: top;">
-                                <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px; height: 320px; display: flex; flex-direction: column; justify-content: space-between;">
-                                    <h3 style="text-align: center; font-size: 14px; margin: 0 0 15px 0;">Estado de Solicitudes</h3>
-                                    <img src="${statusChartImg}" style="max-width: 100%; max-height: 250px; object-fit: contain; margin: auto;">
-                                </div>
-                            </div>
-                            <div style="display: inline-block; width: 48%; margin-bottom: 20px; vertical-align: top;">
-                                <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px; height: 320px; display: flex; flex-direction: column; justify-content: space-between;">
-                                    <h3 style="text-align: center; font-size: 14px; margin: 0 0 15px 0;">Volumen por Bodega</h3>
-                                    <img src="${warehouseChartImg}" style="max-width: 100%; max-height: 250px; object-fit: contain; margin: auto;">
-                                </div>
-                            </div>
-                            <div style="display: inline-block; width: 48%; vertical-align: top;">
-                                <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px; height: 320px; display: flex; flex-direction: column; justify-content: space-between;">
-                                    <h3 style="text-align: center; font-size: 14px; margin: 0 0 15px 0;">Tasa de Cumplimiento</h3>
-                                    <img src="${fulfillmentChartImg}" style="max-width: 100%; max-height: 250px; object-fit: contain; margin: auto;">
-                                </div>
-                            </div>
-                            <div style="display: inline-block; width: 48%; vertical-align: top;">
-                                <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px; height: 320px; display: flex; flex-direction: column; justify-content: space-between;">
-                                    <h3 style="text-align: center; font-size: 14px; margin: 0 0 15px 0;">Solicitadas vs. Enviadas</h3>
-                                    <img src="${requestedVsSentChartImg}" style="max-width: 100%; max-height: 250px; object-fit: contain; margin: auto;">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                // Página de la Tabla con la clase para el salto
+                pdfHtml += `
+                    <div class="pdf-page pdf-section-break">
+                        <h2 class="chart-title">${item.title} - Datos Detallados</h2>
+                        <table class="data-table">
+                            <thead><tr>${item.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                            <tbody>${item.data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+                        </table>
+                    </div>`;
+            }
 
-                    <div class="html2pdf__page-break"></div>
+            pdfHtml += `</body></html>`;
+            
+            const pdfElement = document.createElement('div');
+            pdfElement.innerHTML = pdfHtml;
+            const today = new Date().toISOString().slice(0, 10);
 
-                    <!-- PÁGINA 3: DETALLE DE PRODUCTOS -->
-                    <div style="width: 210mm; height: 296mm; padding: 20mm; box-sizing: border-box; display: flex; flex-direction: column; font-family: Arial, sans-serif;">
-                        <h2 style="text-align: center; font-size: 22px; margin-bottom: 20px;">Top Productos Solicitados</h2>
-                        <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">
-                            <img src="${topProductsChartImg}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-                        </div>
-                    </div>
-                `;
+            // --- CAMBIO 2: Aquí está la parte que regula el salto ---
+            const opt = {
+                margin: 10,
+                filename: `Informe_Gerencial_${today}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                // Esta es la orden directa a la librería:
+                pagebreak: { mode: 'css', before: '.pdf-section-break' }
+            };
 
-                // 4. Configurar y ejecutar html2pdf
-                const today = new Date().toISOString().slice(0, 10);
-                const opt = {
-                    margin: 0,
-                    filename: `Informe_Gerencial_${today}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-
-                await html2pdf().set(opt).from(reportElement).save();
-
+            try {
+                await html2pdf().from(pdfElement).set(opt).save();
             } catch (error) {
-                console.error("Error detallado al generar el PDF:", error);
-                alert("Ocurrió un error al generar el PDF. Por favor, revisa la consola para más detalles.");
-            } finally {
-                dom.downloadPdfBtn.innerHTML = originalButtonText;
-                dom.downloadPdfBtn.disabled = false;
+                console.error("Error al generar el PDF:", error);
+                alert("Ocurrió un error al generar el PDF.");
             }
         }
-        // ==================================================================
-        // FIN DE LA FUNCIÓN DE PDF
-        // ==================================================================```
         function exportManagerReport() {
             const dataToExport = lastFilteredRequests.length > 0 ? lastFilteredRequests : allTransferRequests;
              if (dataToExport.length === 0) {
