@@ -11,6 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Librería de PDF actualizada a la versión más reciente y estable -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -1235,34 +1236,48 @@
         }
         
         // ==================================================================
-        // INICIO DE LA FUNCIÓN DE PDF CORREGIDA Y MEJORADA
+        // INICIO DE LA FUNCIÓN DE PDF DEFINITIVA
         // ==================================================================
+
+        // Función auxiliar para convertir una imagen de una URL a formato de datos (Base64)
+        // Esto evita problemas de CORS al generar el PDF.
+        async function imageToDataUrl(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous'; // Necesario para cargar imágenes de otros dominios
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg'));
+                };
+                img.onerror = (e) => {
+                    console.error("No se pudo cargar la imagen para el PDF:", url, e);
+                    reject(new Error('Error al cargar la imagen del logo.'));
+                };
+                img.src = url;
+            });
+        }
+
         async function downloadPdfReport() {
             const originalButtonText = dom.downloadPdfBtn.innerHTML;
             dom.downloadPdfBtn.innerHTML = `<span><svg class="animate-spin -ml-1 mr-3 h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Generando...</span>`;
             dom.downloadPdfBtn.disabled = true;
 
             try {
-                // 1. Crear un array para contener los elementos de cada página
-                const pages = [];
-                
-                // 2. Función auxiliar para crear un div de página con estilos base
-                const createPdfPage = (content) => {
-                    const page = document.createElement('div');
-                    page.style.width = '210mm';
-                    page.style.height = '297mm';
-                    page.style.padding = '20mm';
-                    page.style.boxSizing = 'border-box';
-                    page.style.backgroundColor = 'white';
-                    page.style.display = 'flex';
-                    page.style.flexDirection = 'column';
-                    page.style.fontFamily = 'Arial, sans-serif';
-                    page.style.color = '#333';
-                    page.innerHTML = content;
-                    return page;
-                };
+                // 1. Convertir todas las imágenes necesarias a formato de datos ANTES de construir el HTML
+                const [logoDataUrl, statusChartImg, warehouseChartImg, fulfillmentChartImg, requestedVsSentChartImg, topProductsChartImg] = await Promise.all([
+                    imageToDataUrl('https://parabarberos.github.io/2.jpg'),
+                    Promise.resolve(charts.statusChart.toBase64Image()),
+                    Promise.resolve(charts.warehouseChart.toBase64Image()),
+                    Promise.resolve(charts.fulfillmentChart.toBase64Image()),
+                    Promise.resolve(charts.requestedVsSentChart.toBase64Image()),
+                    Promise.resolve(charts.topProductsChart.toBase64Image())
+                ]);
 
-                // 3. Recopilar datos (KPIs, títulos, etc.)
+                // 2. Recopilar datos y texto para el informe
                 const reportTitle = "Informe Gerencial de Traslados";
                 const reportSubtitle = dom.reportDateSubtitle.textContent;
                 const kpis = {
@@ -1270,20 +1285,29 @@
                     "Con Novedad": dom.kpiWithNovelty.textContent, "Canceladas": dom.kpiCancelled.textContent,
                 };
                 const kpiColors = { "Completadas": '#22c55e', "Con Novedad": '#f59e0b', "Canceladas": '#ef4444' };
-                
-                // 4. Pre-renderizar todas las imágenes de los gráficos
-                const chartImages = {
-                    statusChart: charts.statusChart.toBase64Image(),
-                    warehouseChart: charts.warehouseChart.toBase64Image(),
-                    fulfillmentChart: charts.fulfillmentChart.toBase64Image(),
-                    requestedVsSentChart: charts.requestedVsSentChart.toBase64Image(),
-                    topProductsChart: charts.topProductsChart.toBase64Image()
-                };
 
-                // PÁGINA 1: Portada
-                const coverContent = `
-                    <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-                        <img src="https://parabarberos.github.io/2.jpg" style="width: 120px; height: 120px; border-radius: 50%; margin-bottom: 20px;">
+                // 3. Crear un único contenedor HTML con todo el contenido del PDF
+                const reportElement = document.createElement('div');
+                reportElement.innerHTML = `
+                    <style>
+                        .pdf-page {
+                            width: 210mm;
+                            min-height: 297mm;
+                            padding: 20mm;
+                            box-sizing: border-box;
+                            background-color: white;
+                            display: flex;
+                            flex-direction: column;
+                            font-family: Arial, sans-serif;
+                            color: #333;
+                            page-break-after: always;
+                        }
+                        .pdf-page:last-child { page-break-after: auto; }
+                    </style>
+
+                    <!-- PÁGINA 1: PORTADA -->
+                    <div class="pdf-page" style="justify-content: center; align-items: center; text-align: center;">
+                        <img src="${logoDataUrl}" style="width: 120px; height: 120px; border-radius: 50%; margin-bottom: 20px;">
                         <h1 style="font-size: 28px; margin-bottom: 8px; color: #111827;">${reportTitle}</h1>
                         <p style="font-size: 14px; color: #6B7280;">${reportSubtitle}</p>
                         <div style="width: 100%; max-width: 500px; margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; gap: 25px 50px;">
@@ -1293,55 +1317,51 @@
                                     <p style="font-size: 32px; font-weight: bold; margin: 0; color: ${kpiColors[key] || '#111827'};">${value}</p>
                                 </div>`).join('')}
                         </div>
-                    </div>`;
-                pages.push(createPdfPage(coverContent));
+                    </div>
 
-                // PÁGINA 2: Dashboard de Gráficos
-                const dashboardContent = `
-                    <h2 style="text-align: center; font-size: 22px; margin-bottom: 20px;">Dashboard Visual</h2>
-                    <div style="flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 25px;">
-                        <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px;">
-                            <h3 style="text-align: center; font-size: 14px; margin-top: 0; margin-bottom: 15px;">Estado de Solicitudes</h3>
-                            <img src="${chartImages.statusChart}" style="width: 100%; height: auto;">
+                    <!-- PÁGINA 2: DASHBOARD DE GRÁFICOS -->
+                    <div class="pdf-page">
+                        <h2 style="text-align: center; font-size: 22px; margin-bottom: 20px; flex-shrink: 0;">Dashboard Visual</h2>
+                        <div style="flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 25px;">
+                            <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                                <h3 style="text-align: center; font-size: 14px; margin: 0 0 15px 0;">Estado de Solicitudes</h3>
+                                <img src="${statusChartImg}" style="max-width: 100%; max-height: 200px; object-fit: contain; margin: auto;">
+                            </div>
+                            <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                                <h3 style="text-align: center; font-size: 14px; margin: 0 0 15px 0;">Volumen por Bodega</h3>
+                                <img src="${warehouseChartImg}" style="max-width: 100%; max-height: 200px; object-fit: contain; margin: auto;">
+                            </div>
+                            <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                                <h3 style="text-align: center; font-size: 14px; margin: 0 0 15px 0;">Tasa de Cumplimiento</h3>
+                                <img src="${fulfillmentChartImg}" style="max-width: 100%; max-height: 200px; object-fit: contain; margin: auto;">
+                            </div>
+                            <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                                <h3 style="text-align: center; font-size: 14px; margin: 0 0 15px 0;">Solicitadas vs. Enviadas</h3>
+                                <img src="${requestedVsSentChartImg}" style="max-width: 100%; max-height: 200px; object-fit: contain; margin: auto;">
+                            </div>
                         </div>
-                        <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px;">
-                            <h3 style="text-align: center; font-size: 14px; margin-top: 0; margin-bottom: 15px;">Volumen por Bodega</h3>
-                            <img src="${chartImages.warehouseChart}" style="width: 100%; height: auto;">
-                        </div>
-                        <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px;">
-                            <h3 style="text-align: center; font-size: 14px; margin-top: 0; margin-bottom: 15px;">Tasa de Cumplimiento</h3>
-                            <img src="${chartImages.fulfillmentChart}" style="width: 100%; height: auto;">
-                        </div>
-                        <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px;">
-                            <h3 style="text-align: center; font-size: 14px; margin-top: 0; margin-bottom: 15px;">Solicitadas vs. Enviadas</h3>
-                            <img src="${chartImages.requestedVsSentChart}" style="width: 100%; height: auto;">
-                        </div>
-                    </div>`;
-                pages.push(createPdfPage(dashboardContent));
+                    </div>
 
-                // PÁGINA 3: Detalle de Productos
-                 const topProductsContent = `
-                    <h2 style="text-align: center; font-size: 22px; margin-bottom: 20px;">Top Productos Solicitados</h2>
-                    <div style="flex-grow: 1;">
-                         <img src="${chartImages.topProductsChart}" style="width: 100%; height: auto;">
-                    </div>`;
-                pages.push(createPdfPage(topProductsContent));
+                    <!-- PÁGINA 3: DETALLE DE PRODUCTOS -->
+                    <div class="pdf-page">
+                        <h2 style="text-align: center; font-size: 22px; margin-bottom: 20px; flex-shrink: 0;">Top Productos Solicitados</h2>
+                        <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">
+                             <img src="${topProductsChartImg}" style="max-width: 100%; max-height: 700px; object-fit: contain;">
+                        </div>
+                    </div>
+                `;
 
-                // 5. Configurar y ejecutar html2pdf
+                // 4. Configurar y ejecutar html2pdf sobre el elemento único
                 const today = new Date().toISOString().slice(0, 10);
                 const opt = {
                     margin: 0,
                     filename: `Informe_Gerencial_${today}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true },
+                    html2canvas: { scale: 2, useCORS: true, logging: false },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
 
-                let worker = html2pdf().set(opt).from(pages[0]);
-                for (let i = 1; i < pages.length; i++) {
-                    worker = worker.addPage().from(pages[i]);
-                }
-                await worker.save();
+                await html2pdf().set(opt).from(reportElement).save();
 
             } catch (error) {
                 console.error("Error detallado al generar el PDF:", error);
