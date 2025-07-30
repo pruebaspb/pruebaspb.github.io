@@ -1260,6 +1260,28 @@
                 img.src = url;
             });
         }
+        // ==================================================================
+        // INICIO DE LA FUNCIÓN DE PDF CORREGIDA Y MEJORADA
+        // ==================================================================
+
+        // Función auxiliar para convertir una imagen de una URL a formato de datos (Base64)
+        // Esto evita problemas de CORS al generar el PDF.
+        async function imageToDataUrl(url) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            } catch (error) {
+                console.error("No se pudo cargar la imagen para el PDF:", url, error);
+                // Retorna un píxel transparente como fallback para no romper el PDF
+                return "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            }
+        }
 
         async function downloadPdfReport() {
             const originalButtonText = dom.downloadPdfBtn.innerHTML;
@@ -1286,13 +1308,13 @@
                 };
                 const kpiColors = { "Completadas": '#22c55e', "Con Novedad": '#f59e0b', "Canceladas": '#ef4444' };
 
-                // 3. Crear un único contenedor HTML con todo el contenido del PDF
+                // 3. Crear el elemento HTML que contendrá todo el informe
                 const reportElement = document.createElement('div');
                 reportElement.innerHTML = `
                     <style>
                         .pdf-page {
                             width: 210mm;
-                            min-height: 297mm;
+                            height: 297mm;
                             padding: 20mm;
                             box-sizing: border-box;
                             background-color: white;
@@ -1300,9 +1322,8 @@
                             flex-direction: column;
                             font-family: Arial, sans-serif;
                             color: #333;
-                            page-break-after: always;
+                            page-break-after: always; /* Crucial para la paginación */
                         }
-                        .pdf-page:last-child { page-break-after: auto; }
                     </style>
 
                     <!-- PÁGINA 1: PORTADA -->
@@ -1351,7 +1372,7 @@
                     </div>
                 `;
 
-                // 4. Configurar y ejecutar html2pdf sobre el elemento único
+                // 4. Configurar y ejecutar html2pdf
                 const today = new Date().toISOString().slice(0, 10);
                 const opt = {
                     margin: 0,
@@ -1374,7 +1395,6 @@
         // ==================================================================
         // FIN DE LA FUNCIÓN DE PDF
         // ==================================================================
-
         function exportManagerReport() {
             const dataToExport = lastFilteredRequests.length > 0 ? lastFilteredRequests : allTransferRequests;
              if (dataToExport.length === 0) {
