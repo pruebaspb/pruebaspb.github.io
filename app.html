@@ -1304,12 +1304,13 @@
     width: 100%;
     padding: 20mm 15mm;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.pdf-page:not(:last-of-type) {
     page-break-after: always;
-    /* --- LÍNEAS NUEVAS PARA CENTRAR --- */
-    display: flex;             /* 1. Activa el modo Flexbox */
-    flex-direction: column;    /* 2. Apila los elementos (título y gráfico) uno sobre otro */
-    justify-content: center;   /* 3. Centra el contenido verticalmente en la página */
-    align-items: center;       /* 4. Centra el contenido horizontalmente en la página */
 }
         .cover-page {
             height: 100vh;
