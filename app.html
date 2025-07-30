@@ -1384,6 +1384,9 @@
 
     // Se eliminó el último page-break para evitar una página en blanco al final
     const finalHtml = pdfHtml.replace(/page-break-after: always;(?=[^<]*<\/body>)/, "");
+    const pdfElement = document.createElement('div');
+    pdfElement.innerHTML = finalHtml;
+    document.body.appendChild(pdfElement);
 
     const today = new Date().toISOString().slice(0, 10);
     const opt = {
@@ -1395,10 +1398,12 @@
     };
 
     try {
-    await html2pdf().from(finalHtml).set(opt).save();
+        await html2pdf().from(pdfElement).set(opt).save();
     } catch (error) {
-    console.error("Error al generar el PDF:", error);
-    alert("Ocurrió un error al generar el PDF.");
+        console.error("Error al generar el PDF:", error);
+        alert("Ocurrió un error al generar el PDF.");
+    } finally {
+        pdfElement.remove();
     }
 }
         function exportManagerReport() {
