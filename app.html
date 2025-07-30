@@ -1240,7 +1240,16 @@
             });
         }
         async function downloadPdfReport() {
-    // --- ESTA PARTE DE PREPARACIÓN DE DATOS NO CAMBIA ---
+    // --- SOLUCIÓN: AÑADIMOS UNA VERIFICACIÓN DE SEGURIDAD AL INICIO ---
+    // Si el objeto 'charts' está vacío o no hay solicitudes filtradas,
+    // significa que no se ha generado un informe válido.
+    if (Object.keys(charts).length === 0 || !lastFilteredRequests || lastFilteredRequests.length === 0) {
+        alert("Por favor, primero haz clic en 'Generar Informe' para poder descargar el PDF.");
+        return; // Detiene la ejecución de la función para evitar un PDF vacío.
+    }
+    // --------------------------------------------------------------------
+
+    // El resto del código, que ya es correcto, se mantiene igual.
     const reportTitle = "Informe Gerencial de Traslados";
     const reportSubtitle = document.getElementById('reportDateSubtitle').textContent;
     
@@ -1297,41 +1306,11 @@
         }
     };
 
-    // --- CAMBIO 1: SEPARAMOS LOS ESTILOS Y EL CONTENIDO HTML ---
-    // Ya no creamos un documento <html> completo, sino solo los estilos y el contenido por separado.
     const pdfStyles = `
     <style>
-        /* Este estilo oculta el contenedor temporal fuera de la pantalla. */
-        #pdf-render-container {
-            position: absolute;
-            left: -9999px;
-            top: auto;
-            width: 1px;
-            height: 1px;
-            overflow: hidden;
-        }
-
-        /* Define el tamaño de cada página en el PDF y la centra con Flexbox. */
-        .pdf-page {
-            width: 210mm;
-            height: 297mm;
-            padding: 20mm 15mm;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: white;
-            page-break-after: always; /* Clave para separar las páginas. */
-        }
-
-        /* Evita que un gráfico o tabla se parta a la mitad. */
-        .pdf-content-block {
-            break-inside: avoid;
-            page-break-inside: avoid;
-        }
-
-        /* Tus otros estilos (títulos, tablas, etc.) se mantienen igual. */
+        #pdf-render-container { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+        .pdf-page { width: 210mm; height: 297mm; padding: 20mm 15mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; page-break-after: always; }
+        .pdf-content-block { break-inside: avoid; page-break-inside: avoid; }
         .pdf-header h1 { font-size: 28px; margin-bottom: 8px; color: #111827; text-align: center; }
         .pdf-header p { font-size: 14px; color: #6B7280; text-align: center; }
         .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px 50px; text-align: center; margin-top: 50px; }
@@ -1346,50 +1325,13 @@
     </style>`;
 
     let contentHtml = '';
-
-    // Portada
-    contentHtml += `
-    <div class="pdf-page">
-        <div class="pdf-content-block">
-            <div class="pdf-header">
-                <h1>${reportTitle}</h1>
-                <p>${reportSubtitle}</p>
-            </div>
-            <div class="kpi-grid">
-                ${Object.entries(kpis).map(([key, value]) => `
-                    <div class="kpi-item">
-                        <h3>${key}</h3>
-                        <p style="color: ${kpiColors[key] || '#111827'};">${value}</p>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    </div>`;
-
-    // Páginas de gráficos y tablas
+    contentHtml += `<div class="pdf-page"><div class="pdf-content-block"><div class="pdf-header"><h1>${reportTitle}</h1><p>${reportSubtitle}</p></div><div class="kpi-grid">${Object.entries(kpis).map(([key, value]) => `<div class="kpi-item"><h3>${key}</h3><p style="color: ${kpiColors[key] || '#111827'};">${value}</p></div>`).join('')}</div></div></div>`;
     for (const chartId in chartDataForPdf) {
         const item = chartDataForPdf[chartId];
         const chartImage = charts[chartId].toBase64Image();
-
-        contentHtml += `
-        <div class="pdf-page">
-            <div class="pdf-content-block">
-                <h2 class="chart-title">${item.title}</h2>
-                <img src="${chartImage}" class="chart-image">
-            </div>
-        </div>
-        <div class="pdf-page">
-            <div class="pdf-content-block">
-                <h2 class="chart-title">${item.title} - Datos Detallados</h2>
-                <table class="data-table">
-                    <thead><tr>${item.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-                    <tbody>${item.data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
-                </table>
-            </div>
-        </div>`;
+        contentHtml += `<div class="pdf-page"><div class="pdf-content-block"><h2 class="chart-title">${item.title}</h2><img src="${chartImage}" class="chart-image"></div></div><div class="pdf-page"><div class="pdf-content-block"><h2 class="chart-title">${item.title} - Datos Detallados</h2><table class="data-table"><thead><tr>${item.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${item.data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
     }
 
-    // --- CAMBIO 2: LÓGICA FINAL PARA CREAR, USAR Y ELIMINAR EL CONTENEDOR TEMPORAL ---
     const today = new Date().toISOString().slice(0, 10);
     const opt = {
         margin: 0,
@@ -1399,24 +1341,17 @@
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // Creamos el contenedor DIV que vivirá temporalmente en la página.
     const renderContainer = document.createElement('div');
     renderContainer.id = 'pdf-render-container';
-    // Le inyectamos los estilos y el contenido que preparamos.
     renderContainer.innerHTML = pdfStyles + contentHtml;
 
     try {
-        // 1. Añadimos el contenedor al BODY. El navegador lo renderizará (invisible para el usuario).
         document.body.appendChild(renderContainer);
-        
-        // 2. Generamos el PDF a partir de este contenedor ya renderizado.
         await html2pdf().from(renderContainer).set(opt).save();
-        
     } catch (error) {
         console.error("Error al generar el PDF:", error);
         alert("Ocurrió un error al generar el PDF.");
     } finally {
-        // 3. (MUY IMPORTANTE) Eliminamos el contenedor del BODY para no dejar basura en la página.
         if (renderContainer) {
             renderContainer.remove();
         }
