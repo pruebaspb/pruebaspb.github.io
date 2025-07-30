@@ -1240,9 +1240,10 @@
             });
         }
         async function downloadPdfReport() {
+    // --- ESTA PARTE DE PREPARACIÓN DE DATOS NO CAMBIA ---
     const reportTitle = "Informe Gerencial de Traslados";
     const reportSubtitle = document.getElementById('reportDateSubtitle').textContent;
-
+    
     const kpis = {
         "Total Solicitudes": dom.kpiTotalRequests.textContent,
         "Completadas": dom.kpiCompleted.textContent,
@@ -1296,79 +1297,87 @@
         }
     };
 
-    // 1. Construcción del HTML con estilos mejorados para el control de saltos de página
-    let pdfHtml = `
-    <html><head><style>
-        body { font-family: Arial, sans-serif; color: #374151; margin: 0; padding: 0; }
+    // --- CAMBIO 1: SEPARAMOS LOS ESTILOS Y EL CONTENIDO HTML ---
+    // Ya no creamos un documento <html> completo, sino solo los estilos y el contenido por separado.
+    const pdfStyles = `
+    <style>
+        /* Este estilo oculta el contenedor temporal fuera de la pantalla. */
+        #pdf-render-container {
+            position: absolute;
+            left: -9999px;
+            top: auto;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+
+        /* Define el tamaño de cada página en el PDF y la centra con Flexbox. */
         .pdf-page {
-    width: 100%;
-    padding: 20mm 15mm;
-    box-sizing: border-box;
-    page-break-after: always;
-    /* --- LÍNEAS NUEVAS PARA CENTRAR --- */
-    display: flex;             /* 1. Activa el modo Flexbox */
-    flex-direction: column;    /* 2. Apila los elementos (título y gráfico) uno sobre otro */
-    justify-content: center;   /* 3. Centra el contenido verticalmente en la página */
-    align-items: center;       /* 4. Centra el contenido horizontalmente en la página */
-}
-        .cover-page {
-            height: 100vh;
+            width: 210mm;
+            height: 297mm;
+            padding: 20mm 15mm;
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            background: white;
+            page-break-after: always; /* Clave para separar las páginas. */
         }
+
+        /* Evita que un gráfico o tabla se parta a la mitad. */
+        .pdf-content-block {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* Tus otros estilos (títulos, tablas, etc.) se mantienen igual. */
         .pdf-header h1 { font-size: 28px; margin-bottom: 8px; color: #111827; text-align: center; }
         .pdf-header p { font-size: 14px; color: #6B7280; text-align: center; }
         .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px 50px; text-align: center; margin-top: 50px; }
         .kpi-item h3 { font-size: 14px; color: #6B7280; font-weight: normal; margin-bottom: 5px; text-transform: uppercase; }
         .kpi-item p { font-size: 32px; font-weight: bold; margin: 0; }
         .chart-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 25px; color: #111827; }
-        .pdf-content-block {
-            break-inside: avoid; /* Propiedad moderna para evitar cortes */
-            page-break-inside: avoid; /* Propiedad antigua para mayor compatibilidad */
-        }
-        .chart-image {
-    max-width: 180mm;
-    max-height: 160mm; /* Puedes reducir la altura máxima para dar más aire */
-    object-fit: contain;
-}
+        .chart-image { max-width: 180mm; max-height: 160mm; object-fit: contain; }
         .data-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; word-wrap: break-word; }
         .data-table th, .data-table td { border: 1px solid #DEE2E6; padding: 10px; text-align: left; }
         .data-table th { background-color: #F8F9FA; font-weight: bold; }
         .data-table tr:nth-child(even) { background-color: #F8F9FA; }
-    </style></head><body>
+    </style>`;
 
-    <div class="pdf-page cover-page">
-        <div class="pdf-header">
-            <h1>${reportTitle}</h1>
-            <p>${reportSubtitle}</p>
-        </div>
-        <div class="kpi-grid">
-            ${Object.entries(kpis).map(([key, value]) => `
-                <div class="kpi-item">
-                    <h3>${key}</h3>
-                    <p style="color: ${kpiColors[key] || '#111827'};">${value}</p>
-                </div>
-            `).join('')}
+    let contentHtml = '';
+
+    // Portada
+    contentHtml += `
+    <div class="pdf-page">
+        <div class="pdf-content-block">
+            <div class="pdf-header">
+                <h1>${reportTitle}</h1>
+                <p>${reportSubtitle}</p>
+            </div>
+            <div class="kpi-grid">
+                ${Object.entries(kpis).map(([key, value]) => `
+                    <div class="kpi-item">
+                        <h3>${key}</h3>
+                        <p style="color: ${kpiColors[key] || '#111827'};">${value}</p>
+                    </div>
+                `).join('')}
+            </div>
         </div>
     </div>`;
 
+    // Páginas de gráficos y tablas
     for (const chartId in chartDataForPdf) {
         const item = chartDataForPdf[chartId];
         const chartImage = charts[chartId].toBase64Image();
 
-        // Contenedor para el gráfico
-        pdfHtml += `
+        contentHtml += `
         <div class="pdf-page">
             <div class="pdf-content-block">
                 <h2 class="chart-title">${item.title}</h2>
                 <img src="${chartImage}" class="chart-image">
             </div>
-        </div>`;
-
-        // Contenedor para la tabla de datos detallados
-        pdfHtml += `
+        </div>
         <div class="pdf-page">
             <div class="pdf-content-block">
                 <h2 class="chart-title">${item.title} - Datos Detallados</h2>
@@ -1380,25 +1389,37 @@
         </div>`;
     }
 
-    pdfHtml += `</body></html>`;
-
-    // Se eliminó el último page-break para evitar una página en blanco al final
-    const finalHtml = pdfHtml.replace(/page-break-after: always;(?=[^<]*<\/body>)/, "");
-
+    // --- CAMBIO 2: LÓGICA FINAL PARA CREAR, USAR Y ELIMINAR EL CONTENEDOR TEMPORAL ---
     const today = new Date().toISOString().slice(0, 10);
     const opt = {
-        margin: [15, 15, 15, 15], // [top, left, bottom, right] en mm
+        margin: 0,
         filename: `Informe_Gerencial_${today}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, letterRendering: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
+    // Creamos el contenedor DIV que vivirá temporalmente en la página.
+    const renderContainer = document.createElement('div');
+    renderContainer.id = 'pdf-render-container';
+    // Le inyectamos los estilos y el contenido que preparamos.
+    renderContainer.innerHTML = pdfStyles + contentHtml;
+
     try {
-    await html2pdf().from(finalHtml).set(opt).save();
+        // 1. Añadimos el contenedor al BODY. El navegador lo renderizará (invisible para el usuario).
+        document.body.appendChild(renderContainer);
+        
+        // 2. Generamos el PDF a partir de este contenedor ya renderizado.
+        await html2pdf().from(renderContainer).set(opt).save();
+        
     } catch (error) {
-    console.error("Error al generar el PDF:", error);
-    alert("Ocurrió un error al generar el PDF.");
+        console.error("Error al generar el PDF:", error);
+        alert("Ocurrió un error al generar el PDF.");
+    } finally {
+        // 3. (MUY IMPORTANTE) Eliminamos el contenedor del BODY para no dejar basura en la página.
+        if (renderContainer) {
+            renderContainer.remove();
+        }
     }
 }
         function exportManagerReport() {
