@@ -1242,7 +1242,7 @@
         async function downloadPdfReport() {
     const reportTitle = "Informe Gerencial de Traslados";
     const reportSubtitle = document.getElementById('reportDateSubtitle').textContent;
-    
+
     const kpis = {
         "Total Solicitudes": dom.kpiTotalRequests.textContent,
         "Completadas": dom.kpiCompleted.textContent,
@@ -1296,7 +1296,7 @@
         }
     };
 
-    // 1. Construcción del HTML
+    // 1. Construcción del HTML con estilos mejorados para el control de saltos de página
     let pdfHtml = `
     <html><head><style>
         body { font-family: Arial, sans-serif; color: #374151; margin: 0; padding: 0; }
@@ -1304,9 +1304,10 @@
             width: 100%;
             padding: 20mm 15mm;
             box-sizing: border-box;
+            page-break-after: always; /* Asegura un salto de página después de cada sección principal */
         }
         .cover-page {
-            height: 100%;
+            height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -1317,13 +1318,11 @@
         .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px 50px; text-align: center; margin-top: 50px; }
         .kpi-item h3 { font-size: 14px; color: #6B7280; font-weight: normal; margin-bottom: 5px; text-transform: uppercase; }
         .kpi-item p { font-size: 32px; font-weight: bold; margin: 0; }
-        .pdf-section-break {
-            page-break-before: always;
-            break-before: page;
-            padding: 20mm 15mm;
-            box-sizing: border-box;
-        }
         .chart-title { font-size: 22px; font-weight: 600; text-align: center; margin-bottom: 25px; color: #111827; }
+        .pdf-content-block {
+            break-inside: avoid; /* Propiedad moderna para evitar cortes */
+            page-break-inside: avoid; /* Propiedad antigua para mayor compatibilidad */
+        }
         .chart-image {
             max-width: 180mm;
             max-height: 180mm;
@@ -1336,7 +1335,7 @@
         .data-table th { background-color: #F8F9FA; font-weight: bold; }
         .data-table tr:nth-child(even) { background-color: #F8F9FA; }
     </style></head><body>
-    
+
     <div class="pdf-page cover-page">
         <div class="pdf-header">
             <h1>${reportTitle}</h1>
@@ -1356,32 +1355,42 @@
         const item = chartDataForPdf[chartId];
         const chartImage = charts[chartId].toBase64Image();
 
+        // Contenedor para el gráfico
         pdfHtml += `
-        <div class="pdf-section-break">
-            <h2 class="chart-title">${item.title}</h2>
-            <img src="${chartImage}" class="chart-image">
-        </div>
-        <div class="pdf-section-break">
-            <h2 class="chart-title">${item.title} - Datos Detallados</h2>
-            <table class="data-table">
-                <thead><tr>${item.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-                <tbody>${item.data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
-            </table>
+        <div class="pdf-page">
+            <div class="pdf-content-block">
+                <h2 class="chart-title">${item.title}</h2>
+                <img src="${chartImage}" class="chart-image">
+            </div>
+        </div>`;
+
+        // Contenedor para la tabla de datos detallados
+        pdfHtml += `
+        <div class="pdf-page">
+            <div class="pdf-content-block">
+                <h2 class="chart-title">${item.title} - Datos Detallados</h2>
+                <table class="data-table">
+                    <thead><tr>${item.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                    <tbody>${item.data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+                </table>
+            </div>
         </div>`;
     }
 
     pdfHtml += `</body></html>`;
 
+    // Se eliminó el último page-break para evitar una página en blanco al final
+    const finalHtml = pdfHtml.replace(/page-break-after: always;(?=[^<]*<\/body>)/, "");
     const pdfElement = document.createElement('div');
-    pdfElement.innerHTML = pdfHtml;
-    document.body.appendChild(pdfElement); // Importante para que estilos se apliquen
+    pdfElement.innerHTML = finalHtml;
+    document.body.appendChild(pdfElement);
 
     const today = new Date().toISOString().slice(0, 10);
     const opt = {
-        margin: 0,
+        margin: [15, 15, 15, 15], // [top, left, bottom, right] en mm
         filename: `Informe_Gerencial_${today}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -1391,7 +1400,7 @@
         console.error("Error al generar el PDF:", error);
         alert("Ocurrió un error al generar el PDF.");
     } finally {
-        pdfElement.remove(); // Limpieza del DOM
+        pdfElement.remove();
     }
 }
         function exportManagerReport() {
